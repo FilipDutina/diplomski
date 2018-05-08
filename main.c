@@ -91,7 +91,7 @@ int main()
 	//receive file---------------------------------------------------------------------
 	//---------------------------------------------------------------------------------
 
-	char* fr_name = "bmp.bmp";
+	char* fr_name = "slika.jpg";
 	char revbuf[BUFLEN];
 	int fr_block_sz = 0;
 	FILE *fr = fopen(fr_name, "wb");
@@ -103,7 +103,6 @@ int main()
 	
 
 	memset(revbuf, 0, BUFLEN);
-	int i;
 
 	fseek(fr, 0, SEEK_SET);
 	
@@ -112,15 +111,6 @@ int main()
 		Sleep(10);
 		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
 		Sleep(10);
-
-		for (i = 0; i < sizeof(revbuf); i++)
-		{
-			if (revbuf[i] == EOF)
-			{
-				break;
-				break;
-			}
-		}
 
 		printf("%d\t", fr_block_sz);
 		

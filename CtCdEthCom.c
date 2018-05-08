@@ -44,7 +44,8 @@
 #include <sys/ioctl.h>
 #include <timers.h>
 #include <timerLib.h>
-//#include <inflateLib.h>
+#include <dirent.h>
+#include <stat.h>
 #include <zlib.h>
 
 //*********************************************************
@@ -230,7 +231,7 @@ static void backgroundTask(void)
 			//-----------------------------------------------------------------------------------------------------
 			
 			
-			char* fs_name = "/mmc0:4/guitar.bmp";
+			char* fs_name = "/mmc0:4/srv.jpg";
 			char sdbuf[BUFLEN];
 			int blockSize; 
 			printf("Sending %s to the client... \n\n", fs_name);
@@ -283,24 +284,7 @@ static void backgroundTask(void)
 			
 			
 			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			
+			//puts("****************************************************");
 			//puts("****************************************************");
 			
 			close(s);
