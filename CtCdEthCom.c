@@ -92,6 +92,7 @@ static void backgroundTask(void);
 
 
 //Other functions
+//void sendFile(char name[]);
 
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
@@ -107,32 +108,11 @@ FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_M
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComCyclic(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
-	//fsm switch case
-	/*switch(changeState)
-	{
-		case 1:
-			idle();
-			break;
-		case 2:
-			dataCollection();
-			break;
-		case 3:
-			dataEncryption();
-			break;
-		case 4:
-			dataUpload();
-			break;
-		default:
-			idle();
-			break;
-	}*/
-	
 	if(changeState == 1)
 	{
 		puts("ulazim u idleeeeeeeeeeee");
 		idle();
 	}
-	
 }
 
 //FSM functions
@@ -230,6 +210,53 @@ static void backgroundTask(void)
 			//send image-------------------------------------------------------------------------------------------
 			//-----------------------------------------------------------------------------------------------------
 			
+			DIR* dirp;
+			struct dirent* direntp;
+			
+			char tempStr[BUFLEN];
+			char tempDir[BUFLEN];
+			
+			dirp = opendir("/mmc0:4/a");
+			if(dirp == NULL)
+			{
+				puts("error opening dir!\n\n");
+			}
+			else
+			{
+				for(;;)
+				{
+					direntp = readdir(dirp);
+					 
+					if(direntp == NULL)
+					{
+						break;
+					}
+					
+					if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
+					{
+						memset(tempStr, 0, BUFLEN);
+						memset(tempDir, 0, BUFLEN);
+						
+						strcpy(tempStr, direntp->d_name);
+						strcpy(tempDir, "/mmc0:4/a/");
+						
+						puts(tempDir);
+						puts(tempStr);
+						
+						strcat(tempDir, tempStr);
+						
+						puts(tempDir);
+						puts("");
+					}
+				}
+				puts("");
+				
+				closedir(dirp);
+			}
+			
+			
+			
+			
 			
 			char* fs_name = "/mmc0:4/srv.jpg";
 			char sdbuf[BUFLEN];
@@ -314,3 +341,4 @@ static void backgroundTask(void)
 }
 
 //Other functions
+
