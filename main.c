@@ -3,6 +3,8 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <inttypes.h>
+#include <time.h>
+#include <Windows.h>
 
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
 
@@ -10,7 +12,7 @@
 #define SWU_BR_CLIENTPORT  29171
 //#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS ploca
 //#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"	//PC
-#define BUFLEN 256
+#define BUFLEN 512
 #define zFAS_IPv4 "192.168.122.60"
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
@@ -87,11 +89,12 @@ int main()
 	}
 
 	//receive file---------------------------------------------------------------------
+	//---------------------------------------------------------------------------------
 
-	char* fr_name = "picture.jpg";
+	char* fr_name = "bmp.bmp";
 	char revbuf[BUFLEN];
-	int write_sz;
-	FILE *fr = fopen(fr_name, "w");
+	int fr_block_sz = 0;
+	FILE *fr = fopen(fr_name, "wb");
 
 	if (fr == NULL)
 	{
@@ -100,45 +103,36 @@ int main()
 	
 
 	memset(revbuf, 0, BUFLEN);
-	int fr_block_sz = 0;
+	int i;
+
+	fseek(fr, 0, SEEK_SET);
 	
-	while((fr_block_sz = recv(s, revbuf, BUFLEN, 0)) != 0)
+	while((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
+		Sleep(10);
+		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+		Sleep(10);
+
+		for (i = 0; i < sizeof(revbuf); i++)
+		{
+			if (revbuf[i] == EOF)
+			{
+				break;
+				break;
+			}
+		}
+
 		printf("%d\t", fr_block_sz);
-
-		write_sz = fwrite(revbuf, sizeof(char), fr_block_sz, fr);
-
-
-		/*if (write_sz < fr_block_sz)
-		{
-			error("File write failed!\n");
-			break;
-		}*/
+		
 		memset(revbuf, 0, BUFLEN);
-		/*if(fr_block_sz == 0 || fr_block_sz != BUFLEN)
-		{
-			puts("if(fr_block_sz == 0 || fr_block_sz != 512)");
-			break;
-		}*/
+		
 	}
+	puts("");
+	puts("izasao iz while-a\n");
 
-	puts("izasao iz vajla xD");
+
 
 	fclose(fr);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 	closesocket(s);

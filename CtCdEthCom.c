@@ -57,7 +57,7 @@
 #define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS
 #define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"	//PC
 #define SOCKET_ERROR -1
-#define BUFLEN 256
+#define BUFLEN 512
 #define BACKLOG 10
 
 #define FILENAME "0:/mmc0:1/guitar.jpg"
@@ -184,7 +184,7 @@ static void backgroundTask(void)
 			listen(s, BACKLOG);
 			
 			//Accept and incoming connection
-			puts("Waiting for incoming connections...");
+			puts("Waiting for incoming connections...\n\n");
 			
 			
 			c = sizeof(struct sockaddr_in);
@@ -227,33 +227,47 @@ static void backgroundTask(void)
 			}
 			
 			//send image-------------------------------------------------------------------------------------------
+			//-----------------------------------------------------------------------------------------------------
 			
-			char* fs_name = "/mmc0:4/srv.jpg";
+			
+			char* fs_name = "/mmc0:4/guitar.bmp";
 			char sdbuf[BUFLEN];
+			int blockSize; 
 			printf("Sending %s to the client... \n\n", fs_name);
-			FILE *fs = fopen(fs_name, "r");
+			FILE *fs = fopen(fs_name, "rb");
 			if(fs == NULL)
 			{
 				printf("ERROR: File %s not found.\n", fs_name);
-				//return 1;
 			}
 			
+			
+			struct timespec nsTime;
+			nsTime.tv_sec = 0;
+			nsTime.tv_nsec = 5000000;
+			
+			
+			fseek(fs, 0, SEEK_SET);
+			
 			memset(sdbuf, 0, BUFLEN); 
-			int fs_block_sz; 
 			
 			puts("ispred while\n\n");
-			while((fs_block_sz = fread(sdbuf, sizeof(char), BUFLEN, fs)) != 0)
+			while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
 			{
-				printf("%d\t", fs_block_sz);
+				//sleep(1);
 				
-				if(send(newSocket, sdbuf, fs_block_sz, 0) < 0)
+				nanosleep(&nsTime, NULL);
+				
+				printf("%d\t", blockSize);
+				
+				
+				if(send(newSocket, sdbuf, blockSize, 0) < 0)
 				{
 					fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", fs_name, errno);
 					break;
 				}
 				memset(sdbuf, 0, BUFLEN); 
 			}
-			printf("Ok! File %s from server was sent!\n\n", fs_name);
+			printf("\n\nOk! File %s from server was sent!\n\n", fs_name);
 			
 			
 			
