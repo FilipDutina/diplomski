@@ -16,14 +16,18 @@
 #define zFAS_IPv4 "192.168.122.60"
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
+SOCKET s;
+int j = 0;
 
 //static const uint8_t zfasAddr[16] = {0xfd, 0x53, 0x7c, 0xb8, 0x03, 0x83, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f};
+
+void receiveFile();
 
 int main()
 {
 	//variables
 	WSADATA wsa;
-	SOCKET s;
+	//SOCKET s;
 	struct sockaddr_in server;
 	char message[] = "Start";
 	char respondOK[] = "Let's communicate!";
@@ -77,8 +81,9 @@ int main()
 		puts("recv failed");
 	}
 	puts("Reply received\n");
-
+	
 	//Add a NULL terminating character to make it a proper string before printing
+	printf("server replay: %d\n", recvSize);
 	serverReply[recvSize] = '\0';
 	puts(serverReply);
 	puts("\n");
@@ -88,45 +93,110 @@ int main()
 		puts("We are connected now, CHEERS! :)\n\n");
 	}
 
-	//receive file---------------------------------------------------------------------
-	//---------------------------------------------------------------------------------
-
-	char* fr_name = "slika.jpg";
-	char revbuf[BUFLEN];
-	int fr_block_sz = 0;
-	FILE *fr = fopen(fr_name, "wb");
-
-	if (fr == NULL)
-	{
-		printf("File %s cannot be opened!\n", fr_name);
-	}
+	//receive file------------------------------------------------------------------------------------------------------------------------------------
+	//------------------------------------------------------------------------------------------------------------------------------------------------
 	
 
-	memset(revbuf, 0, BUFLEN);
+	Sleep(30);
+	printf("PRVI receive\n");
+	receiveFile();
 
-	fseek(fr, 0, SEEK_SET);
-	
-	while((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
-	{
-		Sleep(10);
-		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
-		Sleep(10);
-
-		printf("%d\t", fr_block_sz);
-		
-		memset(revbuf, 0, BUFLEN);
-		
-	}
-	puts("");
-	puts("izasao iz while-a\n");
-
-
-
-	fclose(fr);
+	j = 1;
+	Sleep(30);
+	printf("DRUGI receive\n");
+	receiveFile();
 
 
 	closesocket(s);
 	WSACleanup();
 
 	return 0;
+}
+
+void receiveFile()
+{
+	puts("usao");
+
+	char fr_name[BUFLEN];
+	char revbuf[BUFLEN];
+	int fr_block_sz = 0;
+	int recvNameSize;
+	int recvSizeSize;
+	long sizeOfFile;
+	int i = 1;
+	int ceo;
+	int ostatak;
+
+	//ocisti revbuf
+	memset(revbuf, 0, BUFLEN);
+
+	puts("def promenljive ispred recv()");
+
+	//primi ime fajla
+	if ((recvNameSize = recv(s, fr_name, sizeof(fr_name), 0)) == SOCKET_ERROR)
+	{
+		puts("Name of the file recv() failed");
+	}
+	//ispisi primljenu duzinus
+	printf("%d\n", recvNameSize);
+	//skrati string
+	if(j == 0)
+		fr_name[recvNameSize] = '\0';
+	else
+		fr_name[7] = '\0';
+
+	//ispisi ime fajla
+	puts(fr_name);
+	
+	//otvori fajl za pisanje sa primnjenim imenom
+	FILE *fr = fopen(fr_name, "wb");
+	if (fr == NULL)
+	{
+		printf("File %s cannot be opened!\n", fr_name);
+	}
+
+	//primi velicinu fajla
+	if ((recvSizeSize = recv(s, &sizeOfFile, sizeof(sizeOfFile), 0)) == SOCKET_ERROR)
+	{
+		puts("Name of the file recv() failed");
+	}
+
+	sizeOfFile = ntohl(sizeOfFile);
+
+	printf("PRIMLJENA velicina fajla: %ld\n\n", sizeOfFile);
+
+
+	//vrati na pocetak
+	fseek(fr, 0, SEEK_SET);
+
+	ceo = sizeOfFile / BUFLEN;	//ovde mi ostaje 255
+	ostatak = sizeOfFile % BUFLEN;	//ovde mi ostaje ostatak (479)
+
+	printf("ceo deo: %d \t\t ostatak: %d\n\n", ceo, ostatak);
+
+
+	//while u kom primam fajl
+	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
+	{
+		Sleep(20);
+		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+		Sleep(20);
+		//ispisi velicinu primljenog paketa
+		printf("%d\t", fr_block_sz);
+		//ocisti revbuf
+		memset(revbuf, 0, BUFLEN);
+
+		if (i == ceo)
+		{
+			fr_block_sz = recv(s, revbuf, ostatak, 0);
+			printf("%d\t", fr_block_sz);
+			fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+			break;
+		}
+		i++;
+	}
+	puts("\nizasao iz while-a\n");
+
+
+	fclose(fr);
 }

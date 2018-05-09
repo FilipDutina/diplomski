@@ -92,7 +92,7 @@ static void backgroundTask(void);
 
 
 //Other functions
-//void sendFile(char name[]);
+void sendFile(char fs_name[]);
 
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
@@ -207,14 +207,14 @@ static void backgroundTask(void)
 				}
 			}
 			
-			//send image-------------------------------------------------------------------------------------------
-			//-----------------------------------------------------------------------------------------------------
+			//open&read dir---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+			//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+			//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 			
 			DIR* dirp;
 			struct dirent* direntp;
 			
 			char tempStr[BUFLEN];
-			char tempDir[BUFLEN];
 			
 			dirp = opendir("/mmc0:4/a");
 			if(dirp == NULL)
@@ -234,19 +234,29 @@ static void backgroundTask(void)
 					
 					if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
 					{
+						//nasetuj na 0
 						memset(tempStr, 0, BUFLEN);
-						memset(tempDir, 0, BUFLEN);
+						//memset(tempDir, 0, BUFLEN);
 						
+						//ovde je ime fajla
 						strcpy(tempStr, direntp->d_name);
-						strcpy(tempDir, "/mmc0:4/a/");
+						//a ovde je putanja do njega
+						//strcpy(tempDir, "/mmc0:4/a/");
 						
-						puts(tempDir);
+						//puts(tempDir);
+						puts("U FUNKCIJI GDE CITAM IMENA FAJLOVA:");
 						puts(tempStr);
 						
-						strcat(tempDir, tempStr);
+						//spajanje putanje i imena fajla u tempDir-u
+						//strcat(tempDir, tempStr);
 						
-						puts(tempDir);
-						puts("");
+						//puts(tempDir);
+						//puts("");
+						
+						//funkcija u kojoj prvo posaljem ime fajla pa zatim i sam fajl 
+						sendFile(tempStr);
+						
+						sleep(1);
 					}
 				}
 				puts("");
@@ -254,74 +264,12 @@ static void backgroundTask(void)
 				closedir(dirp);
 			}
 			
-			
-			
-			
-			
-			char* fs_name = "/mmc0:4/srv.jpg";
-			char sdbuf[BUFLEN];
-			int blockSize; 
-			printf("Sending %s to the client... \n\n", fs_name);
-			FILE *fs = fopen(fs_name, "rb");
-			if(fs == NULL)
-			{
-				printf("ERROR: File %s not found.\n", fs_name);
-			}
-			
-			
-			struct timespec nsTime;
-			nsTime.tv_sec = 0;
-			nsTime.tv_nsec = 5000000;
-			
-			
-			fseek(fs, 0, SEEK_SET);
-			
-			memset(sdbuf, 0, BUFLEN); 
-			
-			puts("ispred while\n\n");
-			while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
-			{
-				//sleep(1);
-				
-				nanosleep(&nsTime, NULL);
-				
-				printf("%d\t", blockSize);
-				
-				
-				if(send(newSocket, sdbuf, blockSize, 0) < 0)
-				{
-					fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", fs_name, errno);
-					break;
-				}
-				memset(sdbuf, 0, BUFLEN); 
-			}
-			printf("\n\nOk! File %s from server was sent!\n\n", fs_name);
-			
-			
-			
-			
-			
-			fclose(fs);
-			
-			
-			
-			
-			
-			
-			
-			
-			
-			//puts("****************************************************");
-			//puts("****************************************************");
+		
 			
 			close(s);
 			close(newSocket);
-			//puts("zatvaram sokete");
 			
-			
-			//printf("changeSTAT: %d\n\n", changeState);
 			msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);
-			//puts("msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);");
 			puts("****************************************************");
 		}
 		else if(msg == 2)
@@ -341,4 +289,92 @@ static void backgroundTask(void)
 }
 
 //Other functions
+void sendFile(char fs_name[])
+{
+	sleep(1);
+	
+	//vreme sleep-a
+	struct timespec nsTime;
+	nsTime.tv_sec = 0;
+	nsTime.tv_nsec = 10000000;
+	
+	char tempDir[BUFLEN];
+	long fileLentgh;
+	char sdbuf[BUFLEN];
+	int blockSize;
+	
+	printf("Pre slanja imena fajla: %s\n", fs_name);
+	
+	nanosleep(&nsTime, NULL);
+	
+	//slanje imena fajla BEZ PUTANJE
+	if(send(newSocket, fs_name, strlen(fs_name), 0) == SOCKET_ERROR)
+	{
+		printf("Name of the file send() FAILED!\n\n");
+	}
+	nanosleep(&nsTime, NULL);
 
+	puts("Name of the file is sent\n\n");
+	printf("size of name sent: %d\n", strlen(fs_name));
+	
+	
+	//cistim tempDir
+	memset(tempDir, 0, BUFLEN);
+	//dodajem putanju
+	strcpy(tempDir, "/mmc0:4/a/");
+	//spajanje putanje i imena fajla u tempDir-u
+	strcat(tempDir, fs_name);
+	printf("NAKON SPAJANJA PUTANJE I IMENA FAJLA: %s", tempDir);
+	puts("");
+	
+	printf("Sending %s to the client... \n\n", tempDir);
+	FILE *fs = fopen(tempDir, "rb");
+	if(fs == NULL)
+	{
+		printf("ERROR: File %s not found.\n", tempDir);
+	}
+	
+	//idi do kraja
+	fseek(fs, 0, SEEK_END);
+	//nadji velicinu fajla
+	fileLentgh = ftell(fs);
+	//vrati na pocetak
+	fseek(fs, 0, SEEK_SET);
+	
+	printf("Velicina fajla koji se salje je: %ld\n\n\n", fileLentgh);
+	
+	//slanje velicine tekuceg fajla
+	long convertedNumber = htonl(fileLentgh);
+	if(send(newSocket, &convertedNumber, sizeof(convertedNumber), 0) == SOCKET_ERROR)
+	{
+		printf("Name of the file send() FAILED!\n\n");
+	}
+	puts("Size of file is sent!\n");
+	
+	
+
+	//ocisti sdbuf
+	memset(sdbuf, 0, BUFLEN); 
+	
+	puts("ispred while-a za slanje fajla\n\n");
+	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
+	{
+		nanosleep(&nsTime, NULL);
+		
+		printf("%d\t", blockSize);
+		
+		
+		if(send(newSocket, sdbuf, blockSize, 0) < 0)
+		{
+			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
+			break;
+		}
+		memset(sdbuf, 0, BUFLEN); 
+	}
+	printf("\n\nOk! File %s from server was sent!\n\n", tempDir);
+	
+	
+	fclose(fs);
+	
+	sleep(1);
+}
