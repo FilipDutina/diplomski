@@ -353,7 +353,8 @@ void sendFile(char fs_name[])
 	}
 	puts("Size of file is sent!\n");
 	
-	
+	int sizeOfBuf;
+	int iter;
 
 	//ocisti sdbuf
 	memset(sdbuf, 0, BUFLEN); 
@@ -364,6 +365,14 @@ void sendFile(char fs_name[])
 		nanosleep(&nsTime, NULL);
 		
 		printf("%d\t", blockSize);
+		
+		//POKUSAJ CEZARA
+		sizeOfBuf = sizeof(sdbuf);
+		for(iter = 0; iter < sizeOfBuf; iter++)
+		{
+			sdbuf[iter] = sdbuf[iter] - 1;
+		}
+		
 		
 		
 		if(send(newSocket, sdbuf, blockSize, 0) < 0)

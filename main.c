@@ -91,6 +91,7 @@ int main()
 	if (strcmp(serverReply, respondOK) == 0)
 	{
 		puts("We are connected now, CHEERS! :)\n\n");
+		puts("*****************************************************************************");
 	}
 
 	//receive files-----------------------------------------------------------------------------------------------------------------------------------
@@ -139,7 +140,7 @@ void receiveFile()
 		puts("Name of the file recv() failed");
 	}
 	//ispisi primljenu duzinus
-	printf("%d\n", recvNameSize);
+	printf("velicina imena fajla: %d\t---------->\t", recvNameSize);
 	//skrati string
 	fr_name[recvNameSize] = '\0';
 
@@ -170,7 +171,7 @@ void receiveFile()
 	ceo = sizeOfFile / BUFLEN;	//ovde mi ostaje 255
 	ostatak = sizeOfFile % BUFLEN;	//ovde mi ostaje ostatak (479)
 
-	printf("ceo deo: %d \t\t ostatak: %d\n\n", ceo, ostatak);
+	printf("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak);
 
 
 	//while u kom primam fajl
@@ -193,8 +194,6 @@ void receiveFile()
 		}
 		i++;
 	}
-	puts("\nizasao iz while-a\n");
-
 
 	fclose(fr);
 }
