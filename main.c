@@ -17,7 +17,6 @@
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
 SOCKET s;
-int j = 0;
 
 //static const uint8_t zfasAddr[16] = {0xfd, 0x53, 0x7c, 0xb8, 0x03, 0x83, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f};
 
@@ -33,6 +32,7 @@ int main()
 	char respondOK[] = "Let's communicate!";
 	char serverReply[BUFLEN];
 	int recvSize;
+	int numOfFilesToBeReceived;
 
 	//connection functions
 	printf("\nInitialising Winsock...");
@@ -93,18 +93,23 @@ int main()
 		puts("We are connected now, CHEERS! :)\n\n");
 	}
 
-	//receive file------------------------------------------------------------------------------------------------------------------------------------
+	//receive files-----------------------------------------------------------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------------------------------------------------------------------------
 	
+	//primi velicinu fajla
+	if ((recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0)) == SOCKET_ERROR)
+	{
+		puts("Num of files recv() failed");
+	}
+	numOfFilesToBeReceived = ntohl(numOfFilesToBeReceived);
+	printf("Broj fajlova koje primam: %d\n\n\n", numOfFilesToBeReceived);
 
-	Sleep(30);
-	printf("PRVI receive\n");
-	receiveFile();
-
-	j = 1;
-	Sleep(30);
-	printf("DRUGI receive\n");
-	receiveFile();
+	for (int i = numOfFilesToBeReceived; i > 0; i--)
+	{
+		Sleep(30);
+		printf("Primam fajl broj: %d\n", i);
+		receiveFile();
+	}
 
 
 	closesocket(s);
@@ -115,8 +120,6 @@ int main()
 
 void receiveFile()
 {
-	puts("usao");
-
 	char fr_name[BUFLEN];
 	char revbuf[BUFLEN];
 	int fr_block_sz = 0;
@@ -130,8 +133,6 @@ void receiveFile()
 	//ocisti revbuf
 	memset(revbuf, 0, BUFLEN);
 
-	puts("def promenljive ispred recv()");
-
 	//primi ime fajla
 	if ((recvNameSize = recv(s, fr_name, sizeof(fr_name), 0)) == SOCKET_ERROR)
 	{
@@ -140,14 +141,11 @@ void receiveFile()
 	//ispisi primljenu duzinus
 	printf("%d\n", recvNameSize);
 	//skrati string
-	if(j == 0)
-		fr_name[recvNameSize] = '\0';
-	else
-		fr_name[7] = '\0';
+	fr_name[recvNameSize] = '\0';
 
 	//ispisi ime fajla
 	puts(fr_name);
-	
+
 	//otvori fajl za pisanje sa primnjenim imenom
 	FILE *fr = fopen(fr_name, "wb");
 	if (fr == NULL)

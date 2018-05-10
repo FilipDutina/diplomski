@@ -93,7 +93,7 @@ static void backgroundTask(void);
 
 //Other functions
 void sendFile(char fs_name[]);
-
+int numOfFiles();
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
@@ -207,13 +207,25 @@ static void backgroundTask(void)
 				}
 			}
 			
-			//open&read dir---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+			//open&read&sendNumOf dir---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 			//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 			//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+			int filesNum = numOfFiles();
+			int networkFilesNum;
+			
+			networkFilesNum = htonl(filesNum);
+			if(send(newSocket, &networkFilesNum, sizeof(networkFilesNum), 0) == SOCKET_ERROR)
+			{
+				printf("Number of files send() FAILED!\n\n");
+			}
+			puts("Number of files is sent!\n");
+			
+			
+			
 			
 			DIR* dirp;
 			struct dirent* direntp;
-			
+			//ime fajla
 			char tempStr[BUFLEN];
 			
 			dirp = opendir("/mmc0:4/a");
@@ -236,27 +248,17 @@ static void backgroundTask(void)
 					{
 						//nasetuj na 0
 						memset(tempStr, 0, BUFLEN);
-						//memset(tempDir, 0, BUFLEN);
 						
 						//ovde je ime fajla
 						strcpy(tempStr, direntp->d_name);
-						//a ovde je putanja do njega
-						//strcpy(tempDir, "/mmc0:4/a/");
 						
 						//puts(tempDir);
 						puts("U FUNKCIJI GDE CITAM IMENA FAJLOVA:");
 						puts(tempStr);
 						
-						//spajanje putanje i imena fajla u tempDir-u
-						//strcat(tempDir, tempStr);
-						
-						//puts(tempDir);
-						//puts("");
-						
 						//funkcija u kojoj prvo posaljem ime fajla pa zatim i sam fajl 
 						sendFile(tempStr);
 						
-						sleep(1);
 					}
 				}
 				puts("");
@@ -291,12 +293,12 @@ static void backgroundTask(void)
 //Other functions
 void sendFile(char fs_name[])
 {
-	sleep(1);
+	//sleep(1);
 	
 	//vreme sleep-a
 	struct timespec nsTime;
 	nsTime.tv_sec = 0;
-	nsTime.tv_nsec = 10000000;
+	nsTime.tv_nsec = 50000000;	//trebalo bi da je ovo 0.05 sekundi
 	
 	char tempDir[BUFLEN];
 	long fileLentgh;
@@ -376,5 +378,43 @@ void sendFile(char fs_name[])
 	
 	fclose(fs);
 	
-	sleep(1);
+	nanosleep(&nsTime, NULL);
+}
+
+int numOfFiles()
+{
+	//brojac fajlova
+	int i = 0;
+	
+	DIR* dirp;
+	struct dirent* direntp;
+	
+	dirp = opendir("/mmc0:4/a");
+	if(dirp == NULL)
+	{
+		puts("error opening dir!\n\n");
+	}
+	else
+	{
+		for(;;)
+		{
+			direntp = readdir(dirp);
+					 
+			if(direntp == NULL)
+			{
+				break;
+			}
+			
+			if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
+			{
+				i++;
+			}
+		}
+		
+		closedir(dirp);
+	}
+	
+	printf("Nalazim se u funkciji numOfFiles() i izbrojao sam %d fajlova\n\n", i);
+	
+	return i;
 }
