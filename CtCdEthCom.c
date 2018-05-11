@@ -80,6 +80,15 @@ char message[] = "Start";
 char respondOK[] = "Let's communicate!";
 char respondNotOK[] = "Communication breakdown...";
 
+struct public_key_class 
+{
+	long long modulus;
+	long long exponent;
+};
+
+//ovde ce mi se nalaziti javni kljucevi za enkripciju
+struct public_key_class pub[1];
+
 //FSM functions
 void init();
 void idle();
@@ -91,9 +100,15 @@ void dataUpload();
 static void backgroundTask(void);
 
 
-//Other functions
+//OTHER FUNCTIONS
+void receivePublicKeys();
 void sendFile(char fs_name[]);
 int numOfFiles();
+/*This function will encrypt the data pointed to by message. It returns a pointer to a heap
+array containing the encrypted data, or NULL upon failure. This pointer should be freed when 
+you are finished. The encrypted data will be 8 times as large as the original data.*/
+long long *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub);
+long long rsa_modExp(long long b, long long e, long long m);
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
@@ -207,6 +222,11 @@ static void backgroundTask(void)
 				}
 			}
 			
+			
+			//primi javne kljuceve neophodne za enkripciju
+			receivePublicKeys();
+			
+			
 			//open&read&sendNumOf dir---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 			//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 			//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -291,10 +311,43 @@ static void backgroundTask(void)
 }
 
 //Other functions
+void receivePublicKeys()
+{
+	struct timespec nsTime;
+	nsTime.tv_sec = 0;
+	nsTime.tv_nsec = 50000000;
+	
+	//Primi javne kljuceve
+	long long NETWORKmodulus;
+	long long NETWORKexponent;
+	
+	nanosleep(&nsTime, NULL);
+	
+	if ((recvSize = recv(newSocket, &NETWORKmodulus, sizeof(NETWORKmodulus), 0)) == SOCKET_ERROR)
+	{
+		puts("Recv from client failed!");
+	}
+	puts("MODULUS received!");
+	
+	nanosleep(&nsTime, NULL);
+	
+	if ((recvSize = recv(newSocket, &NETWORKexponent, sizeof(NETWORKexponent), 0)) == SOCKET_ERROR)
+	{
+		puts("Recv from client failed!");
+	}
+	puts("EXPONENT received!");
+	
+	nanosleep(&nsTime, NULL);
+	
+	
+	pub->modulus = ntohl(NETWORKmodulus);
+	pub->exponent = ntohl(NETWORKexponent);
+	
+	printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+}
+
 void sendFile(char fs_name[])
 {
-	//sleep(1);
-	
 	//vreme sleep-a
 	struct timespec nsTime;
 	nsTime.tv_sec = 0;
@@ -304,6 +357,7 @@ void sendFile(char fs_name[])
 	long fileLentgh;
 	char sdbuf[BUFLEN];
 	int blockSize;
+	
 	
 	printf("Pre slanja imena fajla: %s\n", fs_name);
 	
@@ -353,34 +407,55 @@ void sendFile(char fs_name[])
 	}
 	puts("Size of file is sent!\n");
 	
-	int sizeOfBuf;
-	int iter;
 
 	//ocisti sdbuf
 	memset(sdbuf, 0, BUFLEN); 
+	
+	//promenljiva u koju se smesta povratna vrenost enkripcije
+	//long long *encrypted;
+	
+	int i;
 	
 	puts("ispred while-a za slanje fajla\n\n");
 	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
 	{
 		nanosleep(&nsTime, NULL);
-		
 		printf("%d\t", blockSize);
 		
-		//POKUSAJ CEZARA
-		sizeOfBuf = sizeof(sdbuf);
-		for(iter = 0; iter < sizeOfBuf; iter++)
+		printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+		
+		//E N K R I P C I J A
+		printf("Not encrypted:\n");
+		for (i = 0; i < strlen(sdbuf); i++) 
 		{
-			sdbuf[iter] = sdbuf[iter] - 1;
+			printf("%c", sdbuf[i]);
 		}
 		
+		puts("");
 		
+		long long *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
+		if (!encrypted) 
+		{
+			puts("\nEnkripcija nije uspela!\n");
+		}
 		
-		if(send(newSocket, sdbuf, blockSize, 0) < 0)
+		printf("Encrypted:\n");
+		for (i = 0; i < strlen(sdbuf); i++) 
+		{
+			printf("%c", encrypted[i]);
+		}
+		puts("");
+		
+		//SLANJE FAJLA
+		if(send(newSocket, encrypted, blockSize, 0) < 0)
 		{
 			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
 			break;
 		}
 		memset(sdbuf, 0, BUFLEN); 
+		
+		
+		free(encrypted);
 	}
 	printf("\n\nOk! File %s from server was sent!\n\n", tempDir);
 	
@@ -426,4 +501,43 @@ int numOfFiles()
 	printf("Nalazim se u funkciji numOfFiles() i izbrojao sam %d fajlova\n\n", i);
 	
 	return i;
+}
+
+long long rsa_modExp(long long b, long long e, long long m)
+{
+	//puts("ovdi sam");
+	if (b < 0 || e < 0 || m <= 0) 
+	{
+		exit(1);
+	}
+	b = b % m;
+	if (e == 0) return 1;
+	if (e == 1) return b;
+	if (e % 2 == 0) 
+	{
+		return (rsa_modExp(b * b % m, e / 2, m) % m);
+	}
+	if (e % 2 == 1) 
+	{
+		return (b * rsa_modExp(b, (e - 1), m) % m);
+	}
+
+}
+
+long long *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub)
+{
+	long long *encrypted = malloc(sizeof(long long)*message_size);
+	if (encrypted == NULL) 
+	{
+		fprintf(stderr,
+			"Error: Heap allocation failed.\n");
+		return NULL;
+	}
+	long long i = 0;
+	printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+	for (i = 0; i < message_size; i++) 
+	{
+		encrypted[i] = rsa_modExp(message1[i], pub->exponent, pub->modulus);
+	}
+	return encrypted;
 }

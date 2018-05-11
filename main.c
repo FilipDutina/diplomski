@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <time.h>
 #include <Windows.h>
+#include "rsa.h"
 
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
 
@@ -16,6 +17,18 @@
 #define zFAS_IPv4 "192.168.122.60"
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
+#define PUBLIC_AND_PRIVATE_MODULUS 1927	//82216*24797
+#define PUBLIC_EXPONENT 257
+
+#define PRIVATE_EXPONENT 673
+
+const long long modulusAAA = 1927;
+const long long publicExp = 257;
+
+const long long privateExp = 673;
+struct public_key_class pub[1];
+struct private_key_class priv[1];
+
 SOCKET s;
 
 //static const uint8_t zfasAddr[16] = {0xfd, 0x53, 0x7c, 0xb8, 0x03, 0x83, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f};
@@ -24,6 +37,13 @@ void receiveFile();
 
 int main()
 {
+	
+	rsa_gen_keys(pub, priv, PRIME_SOURCE_FILE);
+
+	printf("Private Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)priv->modulus, (long long)priv->exponent);
+	printf("Public Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+
+
 	//variables
 	WSADATA wsa;
 	//SOCKET s;
@@ -81,7 +101,7 @@ int main()
 		puts("recv failed");
 	}
 	puts("Reply received\n");
-	
+
 	//Add a NULL terminating character to make it a proper string before printing
 	printf("server replay: %d\n", recvSize);
 	serverReply[recvSize] = '\0';
@@ -96,8 +116,36 @@ int main()
 
 	//receive files-----------------------------------------------------------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------------------------------------------------------------------------
-	
-	//primi velicinu fajla
+
+	long long modulus = 1927;
+	long long publicExp = 257;
+
+	long long privateExp = 673;
+
+	//slanje javnih kljuceva
+	long long NETWORKmodulus = htonl(modulus);
+	long long NETWORKexponent = htonl(publicExp);
+
+	Sleep(30);
+
+	if (send(s, &NETWORKmodulus, sizeof(NETWORKmodulus), 0) == SOCKET_ERROR)
+	{
+		printf("MODULUS send() FAILED!\n\n");
+	}
+	puts("MODULUS is sent!\n"); 
+
+	Sleep(30);
+
+	if (send(s, &NETWORKexponent, sizeof(NETWORKexponent), 0) == SOCKET_ERROR)
+	{
+		printf("EXPONENT send() FAILED!\n\n");
+	}
+	puts("EXPONENT is sent!\n");
+
+	Sleep(30);
+
+
+	//primi broj fajlova
 	if ((recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0)) == SOCKET_ERROR)
 	{
 		puts("Num of files recv() failed");
@@ -173,10 +221,44 @@ void receiveFile()
 
 	printf("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak);
 
+	priv->modulus = modulusAAA;
+	priv->exponent = privateExp;
+
+	int iter;
+
 
 	//while u kom primam fajl
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
+		puts("PRE DEKRIPCIJE:");
+		printf("size %d \n\n", fr_block_sz);
+		for (iter = 0; iter < sizeof(revbuf); iter++)
+		{
+			printf("%d ", revbuf[i]);
+		}
+		puts("");
+
+		puts("pre funkcije");
+		char *decrypted = rsa_decrypt(revbuf, 8 * fr_block_sz, priv);
+
+		/*IZDEBAGOVATI rsa_decrypt FUNKCIJU!!!!!!!!!!!!!!!!*/
+		puts("a");
+
+		if (!decrypted) 
+		{
+			puts("Error in decryption!\n");
+		}
+		puts("POSLE DEKRIPCIJE:");
+		for (iter = 0; iter < sizeof(decrypted); iter++)
+		{
+			printf("%c", decrypted[i]);
+		}
+		puts("");
+
+
+		//*******************************************************************************************
+
+
 		Sleep(20);
 		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
 		Sleep(20);
@@ -187,6 +269,36 @@ void receiveFile()
 
 		if (i == ceo)
 		{
+
+			puts("PRE DEKRIPCIJE:");
+			printf("size %d \n\n", fr_block_sz);
+			for (iter = 0; iter < sizeof(revbuf); iter++)
+			{
+				printf("%c", revbuf[i]);
+			}
+			puts("");
+
+			puts("pre funkcije");
+			char *decrypted = rsa_decrypt(revbuf, 8 * fr_block_sz, priv);
+			if (!decrypted)
+			{
+				puts("Error in decryption!\n");
+			}
+			puts("POSLE DEKRIPCIJE:");
+			for (iter = 0; iter < sizeof(decrypted); iter++)
+			{
+				printf("%c", decrypted[i]);
+			}
+			puts("");
+
+
+			//*****************************************************************************************
+
+
+
+
+
+
 			fr_block_sz = recv(s, revbuf, ostatak, 0);
 			printf("%d\t", fr_block_sz);
 			fwrite(revbuf, sizeof(char), fr_block_sz, fr);
