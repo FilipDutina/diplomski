@@ -107,8 +107,8 @@ int numOfFiles();
 /*This function will encrypt the data pointed to by message. It returns a pointer to a heap
 array containing the encrypted data, or NULL upon failure. This pointer should be freed when 
 you are finished. The encrypted data will be 8 times as large as the original data.*/
-long long *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub);
-long long rsa_modExp(long long b, long long e, long long m);
+char *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub);
+char rsa_modExp(long long b, long long e, long long m);
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
@@ -412,9 +412,8 @@ void sendFile(char fs_name[])
 	memset(sdbuf, 0, BUFLEN); 
 	
 	//promenljiva u koju se smesta povratna vrenost enkripcije
-	//long long *encrypted;
 	
-	int i;
+	int i, j;
 	
 	puts("ispred while-a za slanje fajla\n\n");
 	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
@@ -433,7 +432,7 @@ void sendFile(char fs_name[])
 		
 		puts("");
 		
-		long long *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
+		char *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
 		if (!encrypted) 
 		{
 			puts("\nEnkripcija nije uspela!\n");
@@ -446,8 +445,19 @@ void sendFile(char fs_name[])
 		}
 		puts("");
 		
+		for(j = 0; j < blockSize; j++)
+		{
+			sdbuf[j] = encrypted[j];
+		}
+		
+		puts("\n Ovde cu ispisati hex vrednosti enkriptovanog buffera: \n\n");
+		for(j = 0; j < blockSize; j++)
+		{
+			printf("%x ", sdbuf[j]);
+		}
+		
 		//SLANJE FAJLA
-		if(send(newSocket, encrypted, blockSize, 0) < 0)
+		if(send(newSocket, sdbuf, blockSize, 0) < 0)
 		{
 			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
 			break;
@@ -503,7 +513,7 @@ int numOfFiles()
 	return i;
 }
 
-long long rsa_modExp(long long b, long long e, long long m)
+char rsa_modExp(long long b, long long e, long long m)
 {
 	//puts("ovdi sam");
 	if (b < 0 || e < 0 || m <= 0) 
@@ -524,9 +534,9 @@ long long rsa_modExp(long long b, long long e, long long m)
 
 }
 
-long long *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub)
+char *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub)
 {
-	long long *encrypted = malloc(sizeof(long long)*message_size);
+	char *encrypted = malloc(sizeof(long long)*message_size);
 	if (encrypted == NULL) 
 	{
 		fprintf(stderr,

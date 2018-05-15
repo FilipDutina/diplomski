@@ -17,15 +17,7 @@
 #define zFAS_IPv4 "192.168.122.60"
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
-#define PUBLIC_AND_PRIVATE_MODULUS 1927	//82216*24797
-#define PUBLIC_EXPONENT 257
 
-#define PRIVATE_EXPONENT 673
-
-const long long modulusAAA = 1927;
-const long long publicExp = 257;
-
-const long long privateExp = 673;
 struct public_key_class pub[1];
 struct private_key_class priv[1];
 
@@ -117,14 +109,9 @@ int main()
 	//receive files-----------------------------------------------------------------------------------------------------------------------------------
 	//------------------------------------------------------------------------------------------------------------------------------------------------
 
-	long long modulus = 1927;
-	long long publicExp = 257;
-
-	long long privateExp = 673;
-
 	//slanje javnih kljuceva
-	long long NETWORKmodulus = htonl(modulus);
-	long long NETWORKexponent = htonl(publicExp);
+	long long NETWORKmodulus = htonl(pub->modulus);
+	long long NETWORKexponent = htonl(pub->exponent);
 
 	Sleep(30);
 
@@ -170,7 +157,8 @@ int main()
 void receiveFile()
 {
 	char fr_name[BUFLEN];
-	char revbuf[BUFLEN];
+	unsigned char revbuf[BUFLEN];
+	long long revbufLong[BUFLEN];
 	int fr_block_sz = 0;
 	int recvNameSize;
 	int recvSizeSize;
@@ -221,53 +209,60 @@ void receiveFile()
 
 	printf("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak);
 
-	priv->modulus = modulusAAA;
-	priv->exponent = privateExp;
-
-	int iter;
-
 
 	//while u kom primam fajl
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
-		puts("PRE DEKRIPCIJE:");
-		printf("size %d \n\n", fr_block_sz);
-		for (iter = 0; iter < sizeof(revbuf); iter++)
+		Sleep(20);
+		for (i = 0; i < fr_block_sz; i++)
 		{
-			printf("%d ", revbuf[i]);
+			revbufLong[i] = revbuf[i];
+			//printf("%x ", revbufLong[i]);
 		}
-		puts("");
+		
 
-		puts("pre funkcije");
-		char *decrypted = rsa_decrypt(revbuf, 8 * fr_block_sz, priv);
-
-		/*IZDEBAGOVATI rsa_decrypt FUNKCIJU!!!!!!!!!!!!!!!!*/
-		puts("a");
-
+		Sleep(20);
+		char *decrypted = rsa_decrypt(revbufLong, 8 * fr_block_sz, priv);
 		if (!decrypted) 
 		{
-			puts("Error in decryption!\n");
+			fprintf(stderr, "Error in decryption!\n");
+			return 1;
 		}
-		puts("POSLE DEKRIPCIJE:");
-		for (iter = 0; iter < sizeof(decrypted); iter++)
+		printf("\n\n\nDecrypted:\n");
+		for (i = 0; i < fr_block_sz; i++)
 		{
 			printf("%c", decrypted[i]);
 		}
-		puts("");
 
+		puts("\n\n");
+		
+
+		Sleep(20);
+		printf("\n");
+		
+
+		Sleep(20);
+		
 
 		//*******************************************************************************************
 
 
 		Sleep(20);
-		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+		fwrite(decrypted, sizeof(char), fr_block_sz, fr);
 		Sleep(20);
 		//ispisi velicinu primljenog paketa
 		printf("%d\t", fr_block_sz);
 		//ocisti revbuf
 		memset(revbuf, 0, BUFLEN);
 
-		if (i == ceo)
+		free(decrypted);
+		
+		
+		puts("\n\n\nGOTOVO!");
+
+		//*******************************************************************************************
+
+		/*if (i == ceo)
 		{
 
 			puts("PRE DEKRIPCIJE:");
@@ -304,7 +299,7 @@ void receiveFile()
 			fwrite(revbuf, sizeof(char), fr_block_sz, fr);
 			break;
 		}
-		i++;
+		i++;*/
 	}
 
 	fclose(fr);
