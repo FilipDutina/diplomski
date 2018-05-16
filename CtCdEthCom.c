@@ -158,7 +158,7 @@ static void backgroundTask(void)
 			{
 				printf("Could not create socket!\n");
 			}
-			printf("Socket created.\n");
+			printf("\n\nSocket created.\n");
 			
 			memset((char*)&server, 0, sizeof(server));
 			server.sin_family = AF_INET;
@@ -180,7 +180,7 @@ static void backgroundTask(void)
 			listen(s, BACKLOG);
 			
 			//Accept and incoming connection
-			puts("Waiting for incoming connections...\n\n");
+			puts("Waiting for incoming connections...\n\n\n\n");
 			
 			
 			c = sizeof(struct sockaddr_in);
@@ -224,7 +224,7 @@ static void backgroundTask(void)
 			
 			
 			//primi javne kljuceve neophodne za enkripciju
-			receivePublicKeys();
+			//receivePublicKeys();
 			
 			
 			//open&read&sendNumOf dir---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -413,48 +413,37 @@ void sendFile(char fs_name[])
 	
 	//promenljiva u koju se smesta povratna vrenost enkripcije
 	
-	int i, j;
+	int i;
 	
 	puts("ispred while-a za slanje fajla\n\n");
 	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
 	{
+		//sleep(1);
+		
 		nanosleep(&nsTime, NULL);
 		printf("%d\t", blockSize);
 		
-		printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+		//printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
 		
 		//E N K R I P C I J A
-		printf("Not encrypted:\n");
-		for (i = 0; i < strlen(sdbuf); i++) 
-		{
-			printf("%c", sdbuf[i]);
-		}
-		
-		puts("");
-		
+		/*nanosleep(&nsTime, NULL);
 		char *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
 		if (!encrypted) 
 		{
 			puts("\nEnkripcija nije uspela!\n");
 		}
 		
-		printf("Encrypted:\n");
-		for (i = 0; i < strlen(sdbuf); i++) 
+		for(i = 0; i < blockSize; i++)
 		{
-			printf("%c", encrypted[i]);
+			printf("%x ", encrypted[i]);
 		}
+		
 		puts("");
 		
-		for(j = 0; j < blockSize; j++)
+		for(i = 0; i < blockSize; i++)
 		{
-			sdbuf[j] = encrypted[j];
-		}
-		
-		puts("\n Ovde cu ispisati hex vrednosti enkriptovanog buffera: \n\n");
-		for(j = 0; j < blockSize; j++)
-		{
-			printf("%x ", sdbuf[j]);
-		}
+			sdbuf[i] = encrypted[i];
+		}*/
 		
 		//SLANJE FAJLA
 		if(send(newSocket, sdbuf, blockSize, 0) < 0)
@@ -465,7 +454,7 @@ void sendFile(char fs_name[])
 		memset(sdbuf, 0, BUFLEN); 
 		
 		
-		free(encrypted);
+		//free(encrypted);
 	}
 	printf("\n\nOk! File %s from server was sent!\n\n", tempDir);
 	
@@ -515,7 +504,6 @@ int numOfFiles()
 
 char rsa_modExp(long long b, long long e, long long m)
 {
-	//puts("ovdi sam");
 	if (b < 0 || e < 0 || m <= 0) 
 	{
 		exit(1);
@@ -544,7 +532,7 @@ char *rsa_encrypt(const char *message1, const unsigned long message_size, const 
 		return NULL;
 	}
 	long long i = 0;
-	printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+	
 	for (i = 0; i < message_size; i++) 
 	{
 		encrypted[i] = rsa_modExp(message1[i], pub->exponent, pub->modulus);

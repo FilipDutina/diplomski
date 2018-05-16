@@ -9,6 +9,7 @@
 
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
 
+#define SLEEP_TIME 20
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
 //#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS ploca
@@ -142,7 +143,7 @@ int main()
 
 	for (int i = numOfFilesToBeReceived; i > 0; i--)
 	{
-		Sleep(30);
+		Sleep(SLEEP_TIME);
 		printf("Primam fajl broj: %d\n", i);
 		receiveFile();
 	}
@@ -150,6 +151,7 @@ int main()
 
 	closesocket(s);
 	WSACleanup();
+
 
 	return 0;
 }
@@ -163,7 +165,8 @@ void receiveFile()
 	int recvNameSize;
 	int recvSizeSize;
 	long sizeOfFile;
-	int i = 1;
+	int iter = 1;
+	int i;
 	int ceo;
 	int ostatak;
 
@@ -175,7 +178,7 @@ void receiveFile()
 	{
 		puts("Name of the file recv() failed");
 	}
-	//ispisi primljenu duzinus
+	//ispisi primljenu duzinu
 	printf("velicina imena fajla: %d\t---------->\t", recvNameSize);
 	//skrati string
 	fr_name[recvNameSize] = '\0';
@@ -213,94 +216,60 @@ void receiveFile()
 	//while u kom primam fajl
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
-		Sleep(20);
-		for (i = 0; i < fr_block_sz; i++)
+		/*for (i = 0; i < fr_block_sz; i++)
 		{
 			revbufLong[i] = revbuf[i];
-			//printf("%x ", revbufLong[i]);
+			printf("%x ", revbufLong[i]);
 		}
 		
 
-		Sleep(20);
-		char *decrypted = rsa_decrypt(revbufLong, 8 * fr_block_sz, priv);
+		Sleep(SLEEP_TIME);
+		//dekripcija primljenog paketa
+		*decrypted = rsa_decrypt(revbufLong, 8 * fr_block_sz, priv);
 		if (!decrypted) 
 		{
-			fprintf(stderr, "Error in decryption!\n");
+			printf("Error in decryption!\n");
 			return 1;
-		}
-		printf("\n\n\nDecrypted:\n");
-		for (i = 0; i < fr_block_sz; i++)
-		{
-			printf("%c", decrypted[i]);
-		}
-
-		puts("\n\n");
-		
-
-		Sleep(20);
-		printf("\n");
-		
-
-		Sleep(20);
+		}*/
 		
 
 		//*******************************************************************************************
-
-
-		Sleep(20);
-		fwrite(decrypted, sizeof(char), fr_block_sz, fr);
-		Sleep(20);
+		Sleep(SLEEP_TIME);
+		//pisanje u fajl
+		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+		Sleep(SLEEP_TIME);
 		//ispisi velicinu primljenog paketa
 		printf("%d\t", fr_block_sz);
 		//ocisti revbuf
 		memset(revbuf, 0, BUFLEN);
 
-		free(decrypted);
-		
-		
-		puts("\n\n\nGOTOVO!");
-
-		//*******************************************************************************************
-
-		/*if (i == ceo)
+		if (iter == ceo || ceo == 0)
 		{
 
-			puts("PRE DEKRIPCIJE:");
-			printf("size %d \n\n", fr_block_sz);
-			for (iter = 0; iter < sizeof(revbuf); iter++)
-			{
-				printf("%c", revbuf[i]);
-			}
-			puts("");
-
-			puts("pre funkcije");
-			char *decrypted = rsa_decrypt(revbuf, 8 * fr_block_sz, priv);
-			if (!decrypted)
-			{
-				puts("Error in decryption!\n");
-			}
-			puts("POSLE DEKRIPCIJE:");
-			for (iter = 0; iter < sizeof(decrypted); iter++)
-			{
-				printf("%c", decrypted[i]);
-			}
-			puts("");
-
-
-			//*****************************************************************************************
-
-
-
-
-
+			puts("usao u iter == ceo");
 
 			fr_block_sz = recv(s, revbuf, ostatak, 0);
 			printf("%d\t", fr_block_sz);
+			Sleep(SLEEP_TIME);
 			fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+			Sleep(SLEEP_TIME);
 			break;
 		}
-		i++;*/
+		iter++;
+
+		//PODESI MEMSETOVE I BROBAJ SA LONG BAFEROM
+
+		//free(decrypted);
+
+		/*if (fr_block_sz < sizeof(revbuf))
+		{
+			break;
+		}*/
 	}
+
+	puts("\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n");
+
+
 
 	fclose(fr);
 }
