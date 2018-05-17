@@ -9,7 +9,7 @@
 
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
 
-#define SLEEP_TIME 20
+#define SLEEP_TIME 15
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
 //#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS ploca
@@ -114,7 +114,7 @@ int main()
 	long long NETWORKmodulus = htonl(pub->modulus);
 	long long NETWORKexponent = htonl(pub->exponent);
 
-	Sleep(30);
+	Sleep(SLEEP_TIME);
 
 	if (send(s, &NETWORKmodulus, sizeof(NETWORKmodulus), 0) == SOCKET_ERROR)
 	{
@@ -122,7 +122,7 @@ int main()
 	}
 	puts("MODULUS is sent!\n"); 
 
-	Sleep(30);
+	Sleep(SLEEP_TIME);
 
 	if (send(s, &NETWORKexponent, sizeof(NETWORKexponent), 0) == SOCKET_ERROR)
 	{
@@ -130,7 +130,7 @@ int main()
 	}
 	puts("EXPONENT is sent!\n");
 
-	Sleep(30);
+	Sleep(SLEEP_TIME);
 
 
 	//primi broj fajlova
@@ -146,8 +146,11 @@ int main()
 		Sleep(SLEEP_TIME);
 		printf("Primam fajl broj: %d\n", i);
 		receiveFile();
+
+		puts("\n\n");
 	}
 
+	puts("\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n\n\n");
 
 	closesocket(s);
 	WSACleanup();
@@ -170,8 +173,9 @@ void receiveFile()
 	int ceo;
 	int ostatak;
 
-	//ocisti revbuf
+	//ocisti revbuf i revbufLong
 	memset(revbuf, 0, BUFLEN);
+	memset(revbufLong, 0, BUFLEN);
 
 	//primi ime fajla
 	if ((recvNameSize = recv(s, fr_name, sizeof(fr_name), 0)) == SOCKET_ERROR)
@@ -216,58 +220,47 @@ void receiveFile()
 	//while u kom primam fajl
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
-		/*for (i = 0; i < fr_block_sz; i++)
+		//prebacujem u long long tip zbog enkripcije
+		for (i = 0; i < fr_block_sz; i++)
 		{
 			revbufLong[i] = revbuf[i];
-			printf("%x ", revbufLong[i]);
 		}
 		
-
-		Sleep(SLEEP_TIME);
+		
+		//Sleep(SLEEP_TIME);
 		//dekripcija primljenog paketa
-		*decrypted = rsa_decrypt(revbufLong, 8 * fr_block_sz, priv);
+		unsigned char *decrypted = rsa_decrypt(revbufLong, 8 * fr_block_sz, priv);
 		if (!decrypted) 
 		{
 			printf("Error in decryption!\n");
 			return 1;
+		}
+		
+		/*for (i = 0; i < fr_block_sz; i++)
+		{
+			printf("%x ", decrypted[i]);
 		}*/
 		
-
 		//*******************************************************************************************
 		Sleep(SLEEP_TIME);
 		//pisanje u fajl
-		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+		fwrite(decrypted, sizeof(char), fr_block_sz, fr);
 		Sleep(SLEEP_TIME);
 		//ispisi velicinu primljenog paketa
 		printf("%d\t", fr_block_sz);
 		//ocisti revbuf
 		memset(revbuf, 0, BUFLEN);
-
-		if (iter == ceo || ceo == 0)
-		{
-
-			puts("usao u iter == ceo");
-
-			fr_block_sz = recv(s, revbuf, ostatak, 0);
-			printf("%d\t", fr_block_sz);
-			Sleep(SLEEP_TIME);
-			fwrite(revbuf, sizeof(char), fr_block_sz, fr);
-			Sleep(SLEEP_TIME);
-			break;
-		}
-		iter++;
+		memset(revbufLong, 0, BUFLEN);
 
 		//PODESI MEMSETOVE I BROBAJ SA LONG BAFEROM
 
-		//free(decrypted);
+		free(decrypted);
 
-		/*if (fr_block_sz < sizeof(revbuf))
+		if (fr_block_sz < sizeof(revbuf))
 		{
 			break;
-		}*/
+		}
 	}
-
-	puts("\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n");
 
 
 

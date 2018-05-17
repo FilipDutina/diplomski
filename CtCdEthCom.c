@@ -224,7 +224,7 @@ static void backgroundTask(void)
 			
 			
 			//primi javne kljuceve neophodne za enkripciju
-			//receivePublicKeys();
+			receivePublicKeys();
 			
 			
 			//open&read&sendNumOf dir---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -313,6 +313,9 @@ static void backgroundTask(void)
 //Other functions
 void receivePublicKeys()
 {
+	
+	puts("---------------------------------------------- receivePublicKeys");
+	
 	struct timespec nsTime;
 	nsTime.tv_sec = 0;
 	nsTime.tv_nsec = 50000000;
@@ -426,24 +429,24 @@ void sendFile(char fs_name[])
 		//printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
 		
 		//E N K R I P C I J A
-		/*nanosleep(&nsTime, NULL);
+		nanosleep(&nsTime, NULL);
 		char *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
 		if (!encrypted) 
 		{
 			puts("\nEnkripcija nije uspela!\n");
 		}
 		
-		for(i = 0; i < blockSize; i++)
+		/*for(i = 0; i < blockSize; i++)
 		{
 			printf("%x ", encrypted[i]);
 		}
 		
-		puts("");
+		puts("");*/
 		
 		for(i = 0; i < blockSize; i++)
 		{
 			sdbuf[i] = encrypted[i];
-		}*/
+		}
 		
 		//SLANJE FAJLA
 		if(send(newSocket, sdbuf, blockSize, 0) < 0)
@@ -454,7 +457,7 @@ void sendFile(char fs_name[])
 		memset(sdbuf, 0, BUFLEN); 
 		
 		
-		//free(encrypted);
+		free(encrypted);
 	}
 	printf("\n\nOk! File %s from server was sent!\n\n", tempDir);
 	
