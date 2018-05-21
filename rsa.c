@@ -167,9 +167,9 @@ long long *rsa_encrypt(const char *message, const unsigned long message_size,
 }
 
 
-char *rsa_decrypt(const long long *message, const unsigned long message_size, const struct private_key_class *priv)
+int16_t *rsa_decrypt(const int64_t *message, const uint32_t message_size, const struct private_key_class *priv)
 {
-	if (message_size % sizeof(long long) != 0) 
+	if (message_size % sizeof(int64_t) != 0)
 	{
 		fprintf(stderr,
 			"Error: message_size is not divisible by %d, so cannot be output of rsa_encrypt\n", (int)sizeof(long long));
@@ -177,30 +177,27 @@ char *rsa_decrypt(const long long *message, const unsigned long message_size, co
 	}
 	// We allocate space to do the decryption (temp) and space for the output as a char array
 	// (decrypted)
-	char *decrypted = malloc(message_size / sizeof(long long));
-	char *temp = malloc(message_size);
-	if ((decrypted == NULL) || (temp == NULL)) 
+	int8_t *decrypted = malloc(message_size / sizeof(int64_t));
+	int8_t *temp = malloc(message_size);
+	if ((decrypted == NULL) || (temp == NULL))
 	{
-		fprintf(stderr,
-			"Error: Heap allocation failed.\n");
+		fprintf(stderr, "Error: Heap allocation failed.\n");
 		return NULL;
 	}
 	// Now we go through each 8-byte chunk and decrypt it.
-	long long i = 0;
+	int64_t i = 0;
 
 	memset(temp, 0, message_size);
 
 	for (i = 0; i < message_size / 8; i++)
 	{
 		temp[i] = rsa_modExp(message[i], priv->exponent, priv->modulus);
-		//Sleep(2);
 	}
 	// The result should be a number in the char range, which gives back the original byte.
 	// We put that into decrypted, then return.
 	for (i = 0; i < message_size / 8; i++)
 	{
 		decrypted[i] = temp[i];
-		//Sleep(2);
 	}
 	free(temp);
 

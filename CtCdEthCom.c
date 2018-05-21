@@ -1,68 +1,6 @@
-#include "MemMap.h" /* PRQA S 5087 */ /* MD_MSR_19.1 */
-#include "Rte_CtCdEthCom.h"
-#include "Sl_WaitUS.h"
-#include "SWCVersionInfo.h"
-
-#include <vxWorks.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
-#include <netinet/in.h >
-#include <sysctlLib.h>
-#include <taskLib.h>
-#include <stdlib.h>
-#include <string.h>
-#include <net/if.h>
-#include <net/route.h>
-#include <ipnet/ipioctl.h>
-#include <ipnet/ipioctl_var.h>
-#include <stdio.h>
-#include <time.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <errno.h>
-#include <cpuset.h>
-#include <sys/mman.h>
-#include <sys/fcntlcom.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <msgQLib.h>
-#include <fioLib.h>
-#include <sockLib.h>
-#include <types.h>
-#include <socket.h>
-#include <netLib.h>
-#include <inetLib.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <net/if_dl.h>
-#include <net/if_types.h>
-#include <net/ifaddrs.h>
-#include <netinet6/in6_var.h>
-#include <netinet/ip.h>
-#include <sys/ioctl.h>
-#include <timers.h>
-#include <timerLib.h>
-#include <dirent.h>
-#include <stat.h>
-#include <zlib.h>
+#include "zFAS_rsa.h"
 
 //*********************************************************
-
-#define RTE_STOP_SEC_CTCDETHCOM_APPL_CODE
-#define RTE_START_SEC_CTCDETHCOM_APPL_CODE
-
-#define SWU_BR_SERVERPORT  29170
-#define SWU_BR_CLIENTPORT  29171
-#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS
-#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"	//PC
-#define SOCKET_ERROR -1
-#define BUFLEN 512
-#define BACKLOG 10
-
-#define FILENAME "0:/mmc0:1/guitar.jpg"
-
 
 MSG_Q_ID messages;
 TASK_ID task;
@@ -80,11 +18,6 @@ char message[] = "Start";
 char respondOK[] = "Let's communicate!";
 char respondNotOK[] = "Communication breakdown...";
 
-struct public_key_class 
-{
-	long long modulus;
-	long long exponent;
-};
 
 //ovde ce mi se nalaziti javni kljucevi za enkripciju
 struct public_key_class pub[1];
@@ -104,11 +37,7 @@ static void backgroundTask(void);
 void receivePublicKeys();
 void sendFile(char fs_name[]);
 int numOfFiles();
-/*This function will encrypt the data pointed to by message. It returns a pointer to a heap
-array containing the encrypted data, or NULL upon failure. This pointer should be freed when 
-you are finished. The encrypted data will be 8 times as large as the original data.*/
-char *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub);
-char rsa_modExp(long long b, long long e, long long m);
+
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
@@ -313,7 +242,6 @@ static void backgroundTask(void)
 //Other functions
 void receivePublicKeys()
 {
-	
 	puts("---------------------------------------------- receivePublicKeys");
 	
 	struct timespec nsTime;
@@ -358,7 +286,7 @@ void sendFile(char fs_name[])
 	
 	char tempDir[BUFLEN];
 	long fileLentgh;
-	char sdbuf[BUFLEN];
+	unsigned char sdbuf[BUFLEN];
 	int blockSize;
 	
 	
@@ -416,7 +344,13 @@ void sendFile(char fs_name[])
 	
 	//promenljiva u koju se smesta povratna vrenost enkripcije
 	
-	int i;
+	//int i;
+	
+	
+	
+	printf("\n\n\n\n\n\n char: %d, unsigned char: %d, int: %d, long long: %d \n\n\n\n\n\n\n", sizeof(char), sizeof(unsigned char), sizeof(int), sizeof(long long));
+	
+	
 	
 	puts("ispred while-a za slanje fajla\n\n");
 	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
@@ -424,17 +358,24 @@ void sendFile(char fs_name[])
 		//sleep(1);
 		
 		nanosleep(&nsTime, NULL);
-		printf("%d\t", blockSize);
+		//printf("%d\t", blockSize);
 		
 		//printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
 		
-		//E N K R I P C I J A
+		printf("%x ", sdbuf[0]);
+		
+		/*pre enkripcije fajlove cita identicno sto je dobro, medjutim nakon enkripcije poneti bajti postaju
+		razliciti...nemam pojma zasto........................*/
+		
+		//E N K R I P C I A
 		nanosleep(&nsTime, NULL);
-		char *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
+		uint16_t *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
 		if (!encrypted) 
 		{
 			puts("\nEnkripcija nije uspela!\n");
 		}
+		
+		printf("-%x-,                          ", encrypted[0]);
 		
 		/*for(i = 0; i < blockSize; i++)
 		{
@@ -443,19 +384,19 @@ void sendFile(char fs_name[])
 		
 		puts("");*/
 		
-		for(i = 0; i < blockSize; i++)
+		/*for(i = 0; i < blockSize; i++)
 		{
 			sdbuf[i] = encrypted[i];
-		}
-		
+		}*/
+		nanosleep(&nsTime, NULL);
 		//SLANJE FAJLA
-		if(send(newSocket, sdbuf, blockSize, 0) < 0)
+		if(send(newSocket, (unsigned char*)encrypted, blockSize, 0) < 0)
 		{
 			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
 			break;
 		}
 		memset(sdbuf, 0, BUFLEN); 
-		
+		nanosleep(&nsTime, NULL);
 		
 		free(encrypted);
 	}
@@ -470,7 +411,7 @@ void sendFile(char fs_name[])
 int numOfFiles()
 {
 	//brojac fajlova
-	int i = 0;
+	int itera = 0;
 	
 	DIR* dirp;
 	struct dirent* direntp;
@@ -493,52 +434,14 @@ int numOfFiles()
 			
 			if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
 			{
-				i++;
+				itera++;
 			}
 		}
 		
 		closedir(dirp);
 	}
 	
-	printf("Nalazim se u funkciji numOfFiles() i izbrojao sam %d fajlova\n\n", i);
+	printf("Nalazim se u funkciji numOfFiles() i izbrojao sam %d fajlova\n\n", itera);
 	
-	return i;
-}
-
-char rsa_modExp(long long b, long long e, long long m)
-{
-	if (b < 0 || e < 0 || m <= 0) 
-	{
-		exit(1);
-	}
-	b = b % m;
-	if (e == 0) return 1;
-	if (e == 1) return b;
-	if (e % 2 == 0) 
-	{
-		return (rsa_modExp(b * b % m, e / 2, m) % m);
-	}
-	if (e % 2 == 1) 
-	{
-		return (b * rsa_modExp(b, (e - 1), m) % m);
-	}
-
-}
-
-char *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub)
-{
-	char *encrypted = malloc(sizeof(long long)*message_size);
-	if (encrypted == NULL) 
-	{
-		fprintf(stderr,
-			"Error: Heap allocation failed.\n");
-		return NULL;
-	}
-	long long i = 0;
-	
-	for (i = 0; i < message_size; i++) 
-	{
-		encrypted[i] = rsa_modExp(message1[i], pub->exponent, pub->modulus);
-	}
-	return encrypted;
+	return itera;
 }
