@@ -286,7 +286,7 @@ void sendFile(char fs_name[])
 	
 	char tempDir[BUFLEN];
 	long fileLentgh;
-	unsigned char sdbuf[BUFLEN];
+	uint8_t sdbuf[BUFLEN];
 	int blockSize;
 	
 	
@@ -353,7 +353,7 @@ void sendFile(char fs_name[])
 	
 	
 	puts("ispred while-a za slanje fajla\n\n");
-	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
+	while((blockSize = fread(sdbuf, sizeof(int8_t), BUFLEN, fs)) != '\0')
 	{
 		//sleep(1);
 		
@@ -369,7 +369,7 @@ void sendFile(char fs_name[])
 		
 		//E N K R I P C I A
 		nanosleep(&nsTime, NULL);
-		uint16_t *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
+		uint8_t *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
 		if (!encrypted) 
 		{
 			puts("\nEnkripcija nije uspela!\n");
@@ -390,7 +390,7 @@ void sendFile(char fs_name[])
 		}*/
 		nanosleep(&nsTime, NULL);
 		//SLANJE FAJLA
-		if(send(newSocket, (unsigned char*)encrypted, blockSize, 0) < 0)
+		if(send(newSocket, (uint8_t*)encrypted, blockSize, 0) < 0)
 		{
 			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
 			break;

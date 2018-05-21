@@ -44,23 +44,32 @@ long long ExtEuclid(long long a, long long b)
 	return y;
 }
 
-long long rsa_modExp(long long b, long long e, long long m)
+int64_t rsa_modExp(int64_t b, int64_t e, int64_t m)
 {
-	//puts("ovdi sam");
-	if (b < 0 || e < 0 || m <= 0) {
+	if (/*b < 0 ||*/ e < 0 || m <= 0)
+	{
 		exit(1);
 		puts("PUKO SAM BRATE");
 	}
+
 	b = b % m;
-	if (e == 0) return 1;
-	if (e == 1) return b;
-	if (e % 2 == 0) {
+
+	if (e == 0)
+	{
+		return 1;
+	}
+	if (e == 1)
+	{
+		return b;
+	}
+	if (e % 2 == 0)
+	{
 		return (rsa_modExp(b * b % m, e / 2, m) % m);
 	}
-	if (e % 2 == 1) {
+	if (e % 2 == 1)
+	{
 		return (b * rsa_modExp(b, (e - 1), m) % m);
 	}
-
 }
 
 // Calling this function will generate a public and private key and store them in the pointers
@@ -88,14 +97,14 @@ void rsa_gen_keys(struct public_key_class *pub, struct private_key_class *priv, 
 
 	// choose random primes from the list, store them as p,q
 
-	long long p = 0;
-	long long q = 0;
+	int64_t p = 0;
+	int64_t q = 0;
 
-	long long e = powl(2, 8) + 1;
-	long long d = 0;
+	int64_t e = powl(2, 8) + 1;
+	int64_t d = 0;
 	char prime_buffer[MAX_DIGITS];
-	long long max = 0;
-	long long phi_max = 0;
+	int64_t max = 0;
+	int64_t phi_max = 0;
 
 	srand(time(NULL));
 
@@ -167,7 +176,7 @@ long long *rsa_encrypt(const char *message, const unsigned long message_size,
 }
 
 
-int16_t *rsa_decrypt(const int64_t *message, const uint32_t message_size, const struct private_key_class *priv)
+uint8_t *rsa_decrypt(const int64_t *message, const uint32_t message_size, const struct private_key_class *priv)
 {
 	if (message_size % sizeof(int64_t) != 0)
 	{
@@ -177,8 +186,8 @@ int16_t *rsa_decrypt(const int64_t *message, const uint32_t message_size, const 
 	}
 	// We allocate space to do the decryption (temp) and space for the output as a char array
 	// (decrypted)
-	int8_t *decrypted = malloc(message_size / sizeof(int64_t));
-	int8_t *temp = malloc(message_size);
+	uint8_t *decrypted = malloc(message_size / sizeof(int64_t));
+	uint8_t *temp = malloc(message_size);
 	if ((decrypted == NULL) || (temp == NULL))
 	{
 		fprintf(stderr, "Error: Heap allocation failed.\n");

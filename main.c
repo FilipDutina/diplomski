@@ -163,7 +163,7 @@ void receiveFile()
 {
 	int8_t fr_name[BUFLEN];
 	uint8_t revbuf[BUFLEN];
-	int64_t revbufLong[BUFLEN];
+	int32_t revbufLong[BUFLEN];
 	int32_t fr_block_sz = 0;
 	int32_t recvNameSize;
 	int32_t recvSizeSize;
@@ -219,18 +219,22 @@ void receiveFile()
 	printf("\n\n\n\n\n\n char: %d, unsigned char: %d, int: %d, long long: %d \n\n\n\n\n\n\n", sizeof(char), sizeof(unsigned char), sizeof(int), sizeof(long long));
 
 	//while u kom primam fajl
-	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
+	while ((fr_block_sz = recv(s, revbufLong, sizeof(revbuf), 0)) != 0)
 	{
 		//prebacujem u long long tip zbog enkripcije
-		for (i = 0; i < fr_block_sz; i++)
+		/*for (i = 0; i < fr_block_sz; i++)
 		{
 			revbufLong[i] = revbuf[i];
 
 			//printf("%x ", revbufLong[i]);
 		}
 
-
+		*/
 		printf("-%x-  ", revbufLong[0]);
+
+		//printf("%d ", sizeof(*revbuf));
+
+		//uint8_t *encrypted = revbuf;
 
 
 		//Sleep(SLEEP_TIME);
@@ -253,7 +257,7 @@ void receiveFile()
 
 		Sleep(SLEEP_TIME);
 		//pisanje u fajl
-		fwrite(decrypted, sizeof(char), fr_block_sz, fr);
+		fwrite(decrypted, sizeof(int8_t), fr_block_sz, fr);
 		Sleep(SLEEP_TIME);
 		//ispisi velicinu primljenog paketa
 		//printf("%d\t", fr_block_sz);
