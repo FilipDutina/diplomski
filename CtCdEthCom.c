@@ -538,17 +538,16 @@ char *rsa_encrypt(const char *message1, const unsigned long message_size, const 
 	
 	for (i = 0; i < message_size; i++) 
 	{
-		if(message1[i] != 0xff)
+		//vrednosti za koje ne radi i koje saljem u originalnom obliku
+		if((message1[i] != 0xff) && (message1[i] != 0xfe) && (message1[i] != 0xfd))
 		{
 			encrypted[i] = rsa_modExp(message1[i], pub->exponent, pub->modulus);
 		}
 		else
 		{
-			puts("-----------------------0xff-------------------------");
-			encrypted[i] = 0xff;
+			encrypted[i] = message1[i];
 		}
 	}
-	
 	
 	return encrypted;
 }

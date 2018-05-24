@@ -114,7 +114,7 @@ void rsa_gen_keys(struct public_key_class *pub, struct private_key_class *priv, 
 		}
 		p = atol(prime_buffer);
 
-		p = 5;
+		p = 11;
 
 		// here we find the prime at position b, store it as q
 		rewind(primes_list);
@@ -126,7 +126,7 @@ void rsa_gen_keys(struct public_key_class *pub, struct private_key_class *priv, 
 		}
 		q = atol(prime_buffer);
 
-		q = 51;
+		q = 23;
 
 		max = p*q;
 		phi_max = (p - 1)*(q - 1);
@@ -193,10 +193,14 @@ char *rsa_decrypt(const long long *message, const unsigned long message_size, co
 
 	for (i = 0; i < message_size / 8; i++)
 	{
-		if (message[i] != 0xff)
+		if ((message[i] != 0xff) && (message[i] != 0xfe) && (message[i] != 0xfd))
+		{
 			temp[i] = rsa_modExp(message[i], priv->exponent, priv->modulus);
+		}
 		else
-			temp[i] = 0xff;
+		{
+			temp[i] = message[i];
+		}
 	}
 	// The result should be a number in the char range, which gives back the original byte.
 	// We put that into decrypted, then return.
@@ -211,9 +215,9 @@ char *rsa_decrypt(const long long *message, const unsigned long message_size, co
 	}
 	free(temp);
 
-	printf("%x ", decrypted[0]);
+	/*printf("%x ", decrypted[0]);
 	printf("%x ", decrypted[1]);
-	printf("%x                  ", decrypted[2]);
+	printf("%x                  ", decrypted[2]);*/
 
 	return decrypted;
 }

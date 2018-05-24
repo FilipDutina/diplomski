@@ -244,7 +244,7 @@ void receiveFile()
 		//*******************************************************************************************
 		Sleep(SLEEP_TIME);
 		//pisanje u fajl
-		fwrite(decrypted, sizeof(char), fr_block_sz, fr);
+		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
 		Sleep(SLEEP_TIME);
 		//ispisi velicinu primljenog paketa
 		printf("%d\t", fr_block_sz);
