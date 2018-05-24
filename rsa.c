@@ -44,32 +44,23 @@ long long ExtEuclid(long long a, long long b)
 	return y;
 }
 
-int64_t rsa_modExp(int64_t b, int64_t e, int64_t m)
+long long rsa_modExp(long long b, long long e, long long m)
 {
-	if (/*b < 0 ||*/ e < 0 || m <= 0)
-	{
+	//puts("ovdi sam");
+	if (/*b < 0 ||*/ e < 0 || m <= 0) {
 		exit(1);
 		puts("PUKO SAM BRATE");
 	}
-
 	b = b % m;
-
-	if (e == 0)
-	{
-		return 1;
-	}
-	if (e == 1)
-	{
-		return b;
-	}
-	if (e % 2 == 0)
-	{
+	if (e == 0) return 1;
+	if (e == 1) return b;
+	if (e % 2 == 0) {
 		return (rsa_modExp(b * b % m, e / 2, m) % m);
 	}
-	if (e % 2 == 1)
-	{
+	if (e % 2 == 1) {
 		return (b * rsa_modExp(b, (e - 1), m) % m);
 	}
+
 }
 
 // Calling this function will generate a public and private key and store them in the pointers
@@ -97,14 +88,14 @@ void rsa_gen_keys(struct public_key_class *pub, struct private_key_class *priv, 
 
 	// choose random primes from the list, store them as p,q
 
-	int64_t p = 0;
-	int64_t q = 0;
+	long long p = 0;
+	long long q = 0;
 
-	int64_t e = powl(2, 8) + 1;
-	int64_t d = 0;
+	long long e = powl(2, 8) + 1;
+	long long d = 0;
 	char prime_buffer[MAX_DIGITS];
-	int64_t max = 0;
-	int64_t phi_max = 0;
+	long long max = 0;
+	long long phi_max = 0;
 
 	srand(time(NULL));
 
@@ -123,7 +114,7 @@ void rsa_gen_keys(struct public_key_class *pub, struct private_key_class *priv, 
 		}
 		p = atol(prime_buffer);
 
-		p = 11;
+		p = 5;
 
 		// here we find the prime at position b, store it as q
 		rewind(primes_list);
@@ -135,7 +126,7 @@ void rsa_gen_keys(struct public_key_class *pub, struct private_key_class *priv, 
 		}
 		q = atol(prime_buffer);
 
-		q = 13;
+		q = 51;
 
 		max = p*q;
 		phi_max = (p - 1)*(q - 1);
@@ -176,9 +167,9 @@ long long *rsa_encrypt(const char *message, const unsigned long message_size,
 }
 
 
-uint8_t *rsa_decrypt(const int64_t *message, const uint32_t message_size, const struct private_key_class *priv)
+char *rsa_decrypt(const long long *message, const unsigned long message_size, const struct private_key_class *priv)
 {
-	if (message_size % sizeof(int64_t) != 0)
+	if (message_size % sizeof(long long) != 0)
 	{
 		fprintf(stderr,
 			"Error: message_size is not divisible by %d, so cannot be output of rsa_encrypt\n", (int)sizeof(long long));
@@ -186,30 +177,43 @@ uint8_t *rsa_decrypt(const int64_t *message, const uint32_t message_size, const 
 	}
 	// We allocate space to do the decryption (temp) and space for the output as a char array
 	// (decrypted)
-	uint8_t *decrypted = malloc(message_size / sizeof(int64_t));
+	uint8_t *decrypted = malloc(message_size / sizeof(long long));
+	//char decrypted[message_size / sizeof(long long)];
 	uint8_t *temp = malloc(message_size);
 	if ((decrypted == NULL) || (temp == NULL))
 	{
-		fprintf(stderr, "Error: Heap allocation failed.\n");
+		fprintf(stderr,
+			"Error: Heap allocation failed.\n");
 		return NULL;
 	}
 	// Now we go through each 8-byte chunk and decrypt it.
-	int64_t i = 0;
+	long long i = 0;
 
 	memset(temp, 0, message_size);
 
 	for (i = 0; i < message_size / 8; i++)
 	{
-		temp[i] = rsa_modExp(message[i], priv->exponent, priv->modulus);
+		if (message[i] != 0xff)
+			temp[i] = rsa_modExp(message[i], priv->exponent, priv->modulus);
+		else
+			temp[i] = 0xff;
 	}
 	// The result should be a number in the char range, which gives back the original byte.
 	// We put that into decrypted, then return.
 	for (i = 0; i < message_size / 8; i++)
 	{
 		decrypted[i] = temp[i];
+
+		/*if (decrypted[i] == 0x70)
+			decrypted[i] = 0xff;*/
+
+		//printf("%x ", decrypted[i]);
 	}
 	free(temp);
 
+	printf("%x ", decrypted[0]);
+	printf("%x ", decrypted[1]);
+	printf("%x                  ", decrypted[2]);
 
 	return decrypted;
 }
