@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <time.h>
 #include <Windows.h>
-#include "rsa.h"
 
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
 
@@ -19,23 +18,37 @@
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
 
-struct public_key_class pub[1];
-struct private_key_class priv[1];
+/*struct public_key_class pub[1];
+struct private_key_class priv[1];*/
 
 SOCKET s;
 
 //static const uint8_t zfasAddr[16] = {0xfd, 0x53, 0x7c, 0xb8, 0x03, 0x83, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f};
 
 void receiveFile();
+void decrypt();
+
+
+long fileLentgh;
+uint32_t en[BUFLEN];
+uint8_t sdbuf[BUFLEN];
+int blockSize;
+
+uint32_t p, q, n, publicKey;
+
 
 int main()
 {
+	p = 41;
+	q = 43;
+	n = p * q;
+	publicKey = 11;
 
-	rsa_gen_keys(pub, priv, PRIME_SOURCE_FILE);
+	/*rsa_gen_keys(pub, priv, PRIME_SOURCE_FILE);
 
 	printf("Private Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)priv->modulus, (long long)priv->exponent);
 	printf("Public Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
-
+	*/
 
 	//variables
 	WSADATA wsa;
@@ -111,8 +124,8 @@ int main()
 	//------------------------------------------------------------------------------------------------------------------------------------------------
 
 	//slanje javnih kljuceva
-	long long NETWORKmodulus = htonl(pub->modulus);
-	long long NETWORKexponent = htonl(pub->exponent);
+	long long NETWORKmodulus = htonl(n);
+	long long NETWORKexponent = htonl(publicKey);
 
 	Sleep(SLEEP_TIME);
 
@@ -218,45 +231,50 @@ void receiveFile()
 
 
 	//while u kom primam fajl
-	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
+	while ((fr_block_sz = recv(s, revbuf, BUFLEN, 0)) != 0)
 	{
 		//prebacujem u long long tip zbog enkripcije
-		for (i = 0; i < fr_block_sz; i++)
-		{
-			revbufLong[i] = revbuf[i];
-		}
-
-
-		//Sleep(SLEEP_TIME);
-		//dekripcija primljenog paketa
-		uint8_t *decrypted = rsa_decrypt(revbufLong, 8 * fr_block_sz, priv);
-		if (!decrypted)
-		{
-			printf("Error in decryption!\n");
-			return 1;
-		}
-
 		/*for (i = 0; i < fr_block_sz; i++)
 		{
-		printf("%x ", decrypted[i]);
+			revbufLong[i] = revbuf[i];
+			//printf("%lld:", revbufLong[i]);
 		}*/
+
+		for (i = 0; i < fr_block_sz; i++)
+		{
+			recv(s, &en[i], sizeof(en[i]), 0);
+			en[i] = ntohl(en[i]);
+			printf("%x:", en[i]);
+			Sleep(2);
+		}
+
+		
+
+
+		//dekripcija primljenog paketa
+		
+		Sleep(SLEEP_TIME);
+
+
+		decrypt();
+
+
 
 		//*******************************************************************************************
 		Sleep(SLEEP_TIME);
 		//pisanje u fajl
-		fwrite(revbuf, sizeof(char), fr_block_sz, fr);
+		fwrite(sdbuf, sizeof(char), fr_block_sz, fr);
 		Sleep(SLEEP_TIME);
 		//ispisi velicinu primljenog paketa
 		printf("%d\t", fr_block_sz);
 		//ocisti revbuf
 		memset(revbuf, 0, BUFLEN);
 		memset(revbufLong, 0, BUFLEN);
+		memset(en, 0, BUFLEN);
+		memset(sdbuf, 0, BUFLEN);
 
-		//PODESI MEMSETOVE I BROBAJ SA LONG BAFEROM
 
-		free(decrypted);
-
-		if (fr_block_sz < sizeof(revbuf))
+		if (fr_block_sz < sizeof(en))
 		{
 			break;
 		}
@@ -265,4 +283,28 @@ void receiveFile()
 
 
 	fclose(fr);
+}
+
+//*********************************************************************************
+//*********************************************************************************
+
+void decrypt()
+{
+	int i, j;
+	int key = 611;
+	int ct, k;
+
+	for (i = 0; i < BUFLEN; i++)
+	{
+		//ovde ne valja!!!
+		ct = en[i];
+		k = 1;
+		for (j = 0; j < key; j++)
+		{
+			k = k * ct;
+			k = k % n;
+		}
+		sdbuf[i] = k;
+	}
+	sdbuf[i] = -1;
 }

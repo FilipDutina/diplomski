@@ -63,31 +63,33 @@
 
 #define FILENAME "0:/mmc0:1/guitar.jpg"
 
+//baferi za enkripciju
+uint8_t sdbuf[BUFLEN];
+uint32_t en[BUFLEN];
 
+//javni kljucevi za enkripciju
+uint32_t publicKey, n;
+
+//
 MSG_Q_ID messages;
 TASK_ID task;
 
+//
 struct sockaddr_in server, client;
 int s, newSocket, c, recvSize;
-char buffer[BUFLEN];
+char replyBuffer[BUFLEN];
 
+//change state flag
 int changeState;	
 
+//
 int changeFSMState;
 int changeBackgroundTaskState;
 
+//poruke za komunikaciju
 char message[] = "Start";
 char respondOK[] = "Let's communicate!";
 char respondNotOK[] = "Communication breakdown...";
-
-struct public_key_class 
-{
-	long long modulus;
-	long long exponent;
-};
-
-//ovde ce mi se nalaziti javni kljucevi za enkripciju
-struct public_key_class pub[1];
 
 //FSM functions
 void init();
@@ -101,14 +103,15 @@ static void backgroundTask(void);
 
 
 //OTHER FUNCTIONS
+
+//
 void receivePublicKeys();
+//posalji trenutni fajl
 void sendFile(char fs_name[]);
+//trazi broj fajlova
 int numOfFiles();
-/*This function will encrypt the data pointed to by message. It returns a pointer to a heap
-array containing the encrypted data, or NULL upon failure. This pointer should be freed when 
-you are finished. The encrypted data will be 8 times as large as the original data.*/
-char *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub);
-char rsa_modExp(long long b, long long e, long long m);
+//enkripcija
+void encrypt();
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
@@ -194,19 +197,19 @@ static void backgroundTask(void)
 			
 			
 			//try to receive initial message from client
-			if ((recvSize = recv(newSocket, buffer, BUFLEN, 0)) == SOCKET_ERROR)
+			if ((recvSize = recv(newSocket, replyBuffer, BUFLEN, 0)) == SOCKET_ERROR)
 			{
 				puts("Recv from client failed!");
 			}
 			puts("Reply received --------->");
 
 			//Add a NULL terminating character to make it a proper string before printing
-			buffer[recvSize] = '\0';
-			puts(buffer);
+			replyBuffer[recvSize] = '\0';
+			puts(replyBuffer);
 			puts("\n");
 			
 			//Compare strings and respond to the client
-			if(strcmp(buffer, message) == 0)
+			if(strcmp(replyBuffer, message) == 0)
 			{
 				if(send(newSocket, respondOK, strlen(respondOK), 0) == SOCKET_ERROR)
 				{
@@ -343,10 +346,10 @@ void receivePublicKeys()
 	nanosleep(&nsTime, NULL);
 	
 	
-	pub->modulus = ntohl(NETWORKmodulus);
-	pub->exponent = ntohl(NETWORKexponent);
+	n = ntohl(NETWORKmodulus);
+	publicKey = ntohl(NETWORKexponent);
 	
-	printf("\nPublic Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
+	printf("\nPublic Key:\n publicKey: %d\n n: %d\n\n", publicKey, n);
 }
 
 void sendFile(char fs_name[])
@@ -354,11 +357,11 @@ void sendFile(char fs_name[])
 	//vreme sleep-a
 	struct timespec nsTime;
 	nsTime.tv_sec = 0;
-	nsTime.tv_nsec = 50000000;	//trebalo bi da je ovo 0.05 sekundi
+	nsTime.tv_nsec = 100000000;	//trebalo bi da je ovo 0.05 sekundi
 	
 	char tempDir[BUFLEN];
 	long fileLentgh;
-	unsigned char sdbuf[BUFLEN];
+	//uint8_t sdbuf[BUFLEN];
 	int blockSize;
 	
 	
@@ -412,7 +415,7 @@ void sendFile(char fs_name[])
 	
 
 	//ocisti sdbuf
-	memset(sdbuf, 0, BUFLEN); 
+	memset(sdbuf, NULL, BUFLEN); 
 	
 	//promenljiva u koju se smesta povratna vrenost enkripcije
 	
@@ -430,34 +433,36 @@ void sendFile(char fs_name[])
 		
 		//E N K R I P C I J A
 		nanosleep(&nsTime, NULL);
-		char *encrypted = rsa_encrypt(sdbuf, sizeof(sdbuf), pub);
-		if (!encrypted) 
-		{
-			puts("\nEnkripcija nije uspela!\n");
-		}
 		
-		for(i = 0; i < blockSize; i++)
-		{
-			printf("%x ", encrypted[i]);
-		}
+		encrypt();
 		
-		puts("");
 		
 		/*for(i = 0; i < blockSize; i++)
 		{
-			sdbuf[i] = encrypted[i];
+			en[i] = htonl(en[i]);
 		}*/
 		
+		
+		
 		//SLANJE FAJLA
-		if(send(newSocket, encrypted, blockSize, 0) < 0)
+		if(send(newSocket, en, blockSize, 0) < 0)
 		{
 			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
 			break;
 		}
-		memset(sdbuf, 0, BUFLEN); 
+		nanosleep(&nsTime, NULL);
+		for(i = 0; i < blockSize; i++)
+		{
+			printf("%x:", en[i]);
+			en[i] = htonl(en[i]);
+			send(newSocket, &en[i], sizeof(en[i]), 0);
+		}
 		
 		
-		free(encrypted);
+		//ocisti sdbuf
+		memset(sdbuf, NULL, BUFLEN); 
+		memset(en, NULL, BUFLEN); 
+		
 	}
 	printf("\n\nOk! File %s from server was sent!\n\n", tempDir);
 	
@@ -505,7 +510,37 @@ int numOfFiles()
 	return i;
 }
 
-char rsa_modExp(long long b, long long e, long long m)
+//*********************************************************************************
+//*********************************************************************************
+
+void encrypt()
+{
+	int pt, k, i, j;
+
+	for(i = 0; i < BUFLEN; i++)
+	{
+		//uzima vrednost trenutnog bajta
+		pt = sdbuf[i];
+		k = 1;
+		for (j = 0; j < publicKey; j++)
+		{
+			k = k * pt;
+			k = k % n;
+		}
+		en[i] = k;
+	}
+}
+
+
+//*********************************************************************************
+//*********************************************************************************
+//*********************************************************************************
+//*********************************************************************************
+//*********************************************************************************
+//*********************************************************************************
+
+
+/*char rsa_modExp(long long b, long long e, long long m)
 {
 	if (b < 0 || e < 0 || m <= 0) 
 	{
@@ -550,4 +585,4 @@ char *rsa_encrypt(const char *message1, const unsigned long message_size, const 
 	}
 	
 	return encrypted;
-}
+}*/
