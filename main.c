@@ -1,9 +1,11 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <inttypes.h>
 #include <time.h>
+#include <math.h>
 #include <Windows.h>
 
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
@@ -25,6 +27,10 @@ SOCKET s;
 void receiveFile();
 void decrypt();
 
+uint32_t prime(uint32_t pr);
+void ce();
+uint32_t cd(uint32_t x);
+
 
 long fileLentgh;
 uint32_t en[BUFLEN];
@@ -33,15 +39,19 @@ int blockSize;
 
 static uint32_t primes[] = {41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
 
-uint32_t p, q, n, publicKey, a, b;
+uint32_t p, q, n, publicKey, a, b, flag, phi;
+uint32_t i, j;
+
+uint32_t e[BUFLEN], d[BUFLEN];
+
+
+uint32_t privateKey, publicKey;
+uint32_t numOfEncAndDec;
 
 int main()
 {
-	//p = 41;
-	//q = 43;
-
-	time_t t;
-	srand((unsigned)time(&t));
+	time_t randTime;
+	srand((unsigned)time(&randTime));
 
 	a = rand() % 13;
 	b = rand() % 13;
@@ -57,7 +67,22 @@ int main()
 	}
 
 	p = primes[a];
+
+	flag = prime(p);
+	if (flag == 0)
+	{
+		printf("\nWRONG INPUT 1\n");
+		exit(1);
+	}
+
 	q = primes[b];
+
+	flag = prime(q);
+	if (flag == 0 || p == q)
+	{
+		printf("\nWRONG INPUT 2\n");
+		exit(1);
+	}
 
 	//da prvi prost broj uvek bude manji od drugog
 	if (p > q)
@@ -67,17 +92,27 @@ int main()
 		q = tempo;
 	}
 
-	printf("Primes are %d and %d\n\n", p, q);
+	printf("Primes are -%d- and -%d-\n\n", p, q);
 
-	
 	n = p * q;
-	publicKey = 11;
-
+	phi = (p - 1)*(q - 1);
 	
+	ce();
+	
+	printf("POSSIBLE VALUES OF e AND d ARE:");
+	for (i = 0; i < j - 1; i++)
+	{
+		printf("\n%d\t%ld", e[i], d[i]);
+	}
+	puts("\n\n");
+
+	//izmedju 0 i 22
+	numOfEncAndDec = rand() % 22;
+
+	printf("numOfEncAndDec is: %d\n", numOfEncAndDec);
+	printf("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]);
 
 
-	//printf("Private Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)priv->modulus, (long long)priv->exponent);
-	//printf("Public Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)pub->modulus, (long long)pub->exponent);
 
 
 	//variables
@@ -155,7 +190,7 @@ int main()
 
 	//slanje javnih kljuceva
 	long long NETWORKmodulus = htonl(n);
-	long long NETWORKexponent = htonl(publicKey);
+	long long NETWORKexponent = htonl(e[numOfEncAndDec]);
 
 	Sleep(SLEEP_TIME);
 
@@ -312,8 +347,8 @@ void receiveFile()
 
 void decrypt()
 {
-	int i, j;
-	int key = 611;
+	//int i, j;
+	int key = d[numOfEncAndDec];
 	int ct, k;
 
 	for (i = 0; i < BUFLEN; i++)
@@ -329,4 +364,66 @@ void decrypt()
 		sdbuf[i] = k;
 	}
 	sdbuf[i] = -1;
+}
+
+//*********************************************************************************
+//*********************************************************************************
+//*********************************************************************************
+//*********************************************************************************
+
+uint32_t prime(uint32_t pr)
+{
+	uint32_t i2;
+	j = sqrt(pr);
+
+	for (i2 = 2; i2 <= j; i2++)
+	{
+		if (pr % i2 == 0)
+		{
+			return 0;
+		}
+	}
+	return 1;
+}
+
+void ce()
+{
+	uint32_t k = 0;
+
+	for (i = 2; i < phi; i++)
+	{
+		if (phi % i == 0)
+		{
+			continue;
+		}
+		flag = prime(i);
+		if (flag == 1 && i != p && i != q)
+		{
+			e[k] = i;
+			flag = cd(e[k]);
+			if (flag > 0)
+			{
+				d[k] = flag;
+				k++;
+			}
+			if (k == 99)
+			{
+				break;
+			}
+		}
+	}
+}
+
+uint32_t cd(uint32_t x)
+{
+	uint32_t k = 1;
+
+	while(1)
+	{
+		k = k + phi;
+		if (k % x == 0)
+		{
+			return(k / x);
+		}
+	}
 }
