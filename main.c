@@ -31,14 +31,49 @@ uint32_t en[BUFLEN];
 uint8_t sdbuf[BUFLEN];
 int blockSize;
 
-uint32_t p, q, n, publicKey;
+static uint32_t primes[] = {41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
+
+uint32_t p, q, n, publicKey, a, b;
 
 int main()
 {
-	p = 41;
-	q = 43;
+	//p = 41;
+	//q = 43;
+
+	time_t t;
+	srand((unsigned)time(&t));
+
+	a = rand() % 13;
+	b = rand() % 13;
+
+	//dva prosta broja nikada ne smeju imati istu vrednost
+	if (a == b && a > 0)
+	{
+		a--;
+	}
+	else if (a == b && a == 0)
+	{
+		a++;
+	}
+
+	p = primes[a];
+	q = primes[b];
+
+	//da prvi prost broj uvek bude manji od drugog
+	if (p > q)
+	{
+		uint32_t tempo = p;
+		p = q;
+		q = tempo;
+	}
+
+	printf("Primes are %d and %d\n\n", p, q);
+
+	
 	n = p * q;
 	publicKey = 11;
+
+	
 
 
 	//printf("Private Key:\n Modulus: %lld\n Exponent: %lld\n\n", (long long)priv->modulus, (long long)priv->exponent);
