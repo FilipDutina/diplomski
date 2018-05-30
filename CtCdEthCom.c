@@ -349,7 +349,7 @@ void receivePublicKeys()
 	n = ntohl(NETWORKmodulus);
 	publicKey = ntohl(NETWORKexponent);
 	
-	printf("\nPublic Key:\n e[0]: %d\n (p * q): %d\n\n", publicKey, n);
+	printf("\nPublic Key:\n\te[0]: %d\n\t(p * q): %d\n\n", publicKey, n);
 }
 
 void sendFile(char fs_name[])

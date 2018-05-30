@@ -11,11 +11,14 @@
 #pragma comment(lib, "ws2_32.lib") //Winsock Library
 
 #define SLEEP_TIME 15
+#define BUFLEN 512
+#define NUM_OF_KEYS 22
+#define LOOP_STOP 99
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
 //#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS ploca
 //#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"	//PC
-#define BUFLEN 512
+
 #define zFAS_IPv4 "192.168.122.60"
 //#define PC_IPv4 "192.168.122.40"
 //#define PC2_IPv4 "192.168.122.88"
@@ -53,8 +56,8 @@ int main()
 	time_t randTime;
 	srand((unsigned)time(&randTime));
 
-	a = rand() % 13;
-	b = rand() % 13;
+	a = rand() % (sizeof(primes) / sizeof(uint32_t));
+	b = rand() % (sizeof(primes) / sizeof(uint32_t));
 
 	//dva prosta broja nikada ne smeju imati istu vrednost
 	if (a == b && a > 0)
@@ -102,12 +105,12 @@ int main()
 	printf("POSSIBLE VALUES OF e AND d ARE:");
 	for (i = 0; i < j - 1; i++)
 	{
-		printf("\n%d\t%ld", e[i], d[i]);
+		printf("\n%d.\t%d\t%ld",i, e[i], d[i]);
 	}
 	puts("\n\n");
 
 	//izmedju 0 i 22
-	numOfEncAndDec = rand() % 22;
+	numOfEncAndDec = rand() % NUM_OF_KEYS;
 
 	printf("numOfEncAndDec is: %d\n", numOfEncAndDec);
 	printf("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]);
@@ -328,9 +331,6 @@ void receiveFile()
 		memset(sdbuf, 0, BUFLEN);
 		memset(en, 0, BUFLEN);
 
-		//PODESI MEMSETOVE I BROBAJ SA LONG BAFEROM
-
-
 		if (fr_block_sz < sizeof(revbuf))
 		{
 			break;
@@ -347,7 +347,6 @@ void receiveFile()
 
 void decrypt()
 {
-	//int i, j;
 	int key = d[numOfEncAndDec];
 	int ct, k;
 
@@ -373,12 +372,12 @@ void decrypt()
 
 uint32_t prime(uint32_t pr)
 {
-	uint32_t i2;
+	uint32_t iter2;
 	j = sqrt(pr);
 
-	for (i2 = 2; i2 <= j; i2++)
+	for (iter2 = 2; iter2 <= j; iter2++)
 	{
-		if (pr % i2 == 0)
+		if (pr % iter2 == 0)
 		{
 			return 0;
 		}
@@ -396,17 +395,21 @@ void ce()
 		{
 			continue;
 		}
+
 		flag = prime(i);
+
 		if (flag == 1 && i != p && i != q)
 		{
 			e[k] = i;
 			flag = cd(e[k]);
+
 			if (flag > 0)
 			{
 				d[k] = flag;
 				k++;
 			}
-			if (k == 99)
+
+			if (k == LOOP_STOP)
 			{
 				break;
 			}
@@ -421,6 +424,7 @@ uint32_t cd(uint32_t x)
 	while(1)
 	{
 		k = k + phi;
+
 		if (k % x == 0)
 		{
 			return(k / x);
