@@ -451,9 +451,9 @@ void sendFile(char fs_name[])
 			break;
 		}
 		nanosleep(&nsTime, NULL);
+		
 		for(i = 0; i < blockSize; i++)
 		{
-			printf("%x:", en[i]);
 			en[i] = htonl(en[i]);
 			send(newSocket, &en[i], sizeof(en[i]), 0);
 		}
@@ -530,59 +530,3 @@ void encrypt()
 		en[i] = k;
 	}
 }
-
-
-//*********************************************************************************
-//*********************************************************************************
-//*********************************************************************************
-//*********************************************************************************
-//*********************************************************************************
-//*********************************************************************************
-
-
-/*char rsa_modExp(long long b, long long e, long long m)
-{
-	if (b < 0 || e < 0 || m <= 0) 
-	{
-		exit(1);
-	}
-	b = b % m;
-	if (e == 0) return 1;
-	if (e == 1) return b;
-	if (e % 2 == 0) 
-	{
-		return (rsa_modExp(b * b % m, e / 2, m) % m);
-	}
-	if (e % 2 == 1) 
-	{
-		return (b * rsa_modExp(b, (e - 1), m) % m);
-	}
-
-}
-
-char *rsa_encrypt(const char *message1, const unsigned long message_size, const struct public_key_class *pub)
-{
-	char *encrypted = malloc(sizeof(long long)*message_size);
-	if (encrypted == NULL) 
-	{
-		fprintf(stderr,
-			"Error: Heap allocation failed.\n");
-		return NULL;
-	}
-	long long i = 0;
-	
-	for (i = 0; i < message_size; i++) 
-	{
-		//vrednosti za koje ne radi i koje saljem u originalnom obliku
-		if((message1[i] != 0xff) && (message1[i] != 0xfe) && (message1[i] != 0xfd))
-		{
-			encrypted[i] = rsa_modExp(message1[i], pub->exponent, pub->modulus);
-		}
-		else
-		{
-			encrypted[i] = message1[i];
-		}
-	}
-	
-	return encrypted;
-}*/
