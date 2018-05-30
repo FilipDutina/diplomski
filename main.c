@@ -8,7 +8,8 @@
 #include <math.h>
 #include <Windows.h>
 
-#pragma comment(lib, "ws2_32.lib") //Winsock Library
+/*Winsock Library*/
+#pragma comment(lib, "ws2_32.lib") 
 
 #define SLEEP_TIME 15
 #define BUFLEN 512
@@ -16,40 +17,31 @@
 #define LOOP_STOP 99
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
-//#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	//zFAS ploca
-//#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"	//PC
+/*#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"
+#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"*/	
 
 #define zFAS_IPv4 "192.168.122.60"
-//#define PC_IPv4 "192.168.122.40"
-//#define PC2_IPv4 "192.168.122.88"
 
-SOCKET s;
-
-//static const uint8_t zfasAddr[16] = {0xfd, 0x53, 0x7c, 0xb8, 0x03, 0x83, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4f};
-
+/*deklaracije funkcija*/
 void receiveFile();
 void decrypt();
-
 uint32_t prime(uint32_t pr);
 void ce();
 uint32_t cd(uint32_t x);
 
 
-long fileLentgh;
+/*soket*/
+SOCKET s;
+/*bafer u koji primam enkriptovanu poruku*/
 uint32_t en[BUFLEN];
+/*izlazni bafer sa dekriptovanom vrednoscu*/
 uint8_t sdbuf[BUFLEN];
-int blockSize;
-
-static uint32_t primes[] = {41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97};
-
-uint32_t p, q, n, publicKey, a, b, flag, phi;
-uint32_t i, j;
-
+/*privatni i javni kljucevi*/
 uint32_t e[BUFLEN], d[BUFLEN];
-
-
-uint32_t privateKey, publicKey;
-uint32_t numOfEncAndDec;
+/**/
+uint32_t p, q, n, a, b, flag, phi, i, j, numOfEncAndDec;
+/*niz prostih brojeva koji se koriste za enkripciju*/
+static uint32_t primes[] = { 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 };
 
 int main()
 {
@@ -59,7 +51,7 @@ int main()
 	a = rand() % (sizeof(primes) / sizeof(uint32_t));
 	b = rand() % (sizeof(primes) / sizeof(uint32_t));
 
-	//dva prosta broja nikada ne smeju imati istu vrednost
+	/*dva prosta broja nikada ne smeju imati istu vrednost*/
 	if (a == b && a > 0)
 	{
 		a--;
@@ -87,7 +79,7 @@ int main()
 		exit(1);
 	}
 
-	//da prvi prost broj uvek bude manji od drugog
+	/*prvi prost broj treba da bude manji od drugog*/
 	if (p > q)
 	{
 		uint32_t tempo = p;
@@ -109,26 +101,22 @@ int main()
 	}
 	puts("\n\n");
 
-	//izmedju 0 i 22
+	/*izmedju 0 i 22*/
 	numOfEncAndDec = rand() % NUM_OF_KEYS;
 
 	printf("numOfEncAndDec is: %d\n", numOfEncAndDec);
 	printf("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]);
 
-
-
-
-	//variables
+	/*promenljive koje se koriste za komunikaciju*/
 	WSADATA wsa;
-	//SOCKET s;
 	struct sockaddr_in server;
-	char message[] = "Start";
-	char respondOK[] = "Let's communicate!";
-	char serverReply[BUFLEN];
-	int recvSize;
-	int numOfFilesToBeReceived;
+	uint8_t message[] = "Start";
+	uint8_t respondOK[] = "Let's communicate!";
+	uint8_t serverReply[BUFLEN];
+	int32_t recvSize;
+	int32_t numOfFilesToBeReceived;
 
-	//connection functions
+	/*funkcije za konekciju*/
 	printf("\nInitialising Winsock...");
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
@@ -136,7 +124,6 @@ int main()
 		return 1;
 	}
 	printf("Initialised.\n");
-
 
 	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
@@ -146,13 +133,9 @@ int main()
 
 	server.sin_family = AF_INET;
 	server.sin_port = htons(SWU_BR_SERVERPORT);
-	//server.sin6_addr = in6addr_any;
-	//server.sin6_addr.s6_addr = SWUP_ZFAS_IP_ADDRESS;
-	//memcpy(server.sin6_addr.s6_addr, zfasAddr, sizeof(zfasAddr));
-	//inet_pton(AF_INET6, "::1", &(server.sin6_addr));
 	server.sin_addr.s_addr = inet_addr(zFAS_IPv4);
 
-	//Connect to remote server
+	/*konekcija na zFAS plocu*/
 	puts("Connect to remote server");
 	if (connect(s, (struct sockaddr*)&server, sizeof(server)) < 0)
 	{
@@ -161,7 +144,7 @@ int main()
 	}
 	puts("Connected");
 
-	//Send some data
+	/*slanje inicijalne poruke*/
 	if (send(s, message, strlen(message), 0) < 0)
 	{
 		puts("Send failed");
@@ -169,14 +152,14 @@ int main()
 	}
 	puts("Data sent\n");
 
-	//Receive a reply from the server
+	/*primanje odgovora od zFAS ploce*/
 	if ((recvSize = recv(s, serverReply, BUFLEN, 0)) == SOCKET_ERROR)
 	{
 		puts("recv failed");
 	}
 	puts("Reply received\n");
 
-	//Add a NULL terminating character to make it a proper string before printing
+	/*dodavanje NULL terminatora na kraj stringa*/
 	printf("server replay: %d\n", recvSize);
 	serverReply[recvSize] = '\0';
 	puts(serverReply);
@@ -188,12 +171,9 @@ int main()
 		puts("*****************************************************************************");
 	}
 
-	//receive files-----------------------------------------------------------------------------------------------------------------------------------
-	//------------------------------------------------------------------------------------------------------------------------------------------------
-
-	//slanje javnih kljuceva
-	long long NETWORKmodulus = htonl(n);
-	long long NETWORKexponent = htonl(e[numOfEncAndDec]);
+	/*slanje javnih kljuceva ploci*/
+	uint64_t NETWORKmodulus = htonl(n);
+	uint64_t NETWORKexponent = htonl(e[numOfEncAndDec]);
 
 	Sleep(SLEEP_TIME);
 
@@ -213,8 +193,7 @@ int main()
 
 	Sleep(SLEEP_TIME);
 
-
-	//primi broj fajlova
+	/*primanje broja fajlova koje ploca salje*/
 	if ((recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0)) == SOCKET_ERROR)
 	{
 		puts("Num of files recv() failed");
@@ -222,10 +201,13 @@ int main()
 	numOfFilesToBeReceived = ntohl(numOfFilesToBeReceived);
 	printf("Broj fajlova koje primam: %d\n\n\n", numOfFilesToBeReceived);
 
+	/*for petlja u kojoj pozivam funkciju receiveFile() za svaki fajl posebno*/
 	for (int i = numOfFilesToBeReceived; i > 0; i--)
 	{
 		Sleep(SLEEP_TIME);
+
 		printf("Primam fajl broj: %d\n", i);
+
 		receiveFile();
 
 		puts("\n\n");
@@ -233,52 +215,51 @@ int main()
 
 	puts("\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n\n\n");
 
+	/*zatvaranje soketa*/
 	closesocket(s);
 	WSACleanup();
-
 
 	return 0;
 }
 
+/*DEFINICIJE FUNKCIJA*/
+
+/*funkcija za primanje fajla*/
 void receiveFile()
 {
-	char fr_name[BUFLEN];
-	unsigned char revbuf[BUFLEN];
-	long long revbufLong[BUFLEN];
-	int fr_block_sz = 0;
-	int recvNameSize;
-	int recvSizeSize;
-	long sizeOfFile;
-	int iter = 1;
-	int i;
-	int ceo;
-	int ostatak;
+	uint8_t fr_name[BUFLEN];
+	uint8_t revbuf[BUFLEN];
+	int32_t fr_block_sz = 0;
+	int32_t recvNameSize;
+	int32_t recvSizeSize;
+	int64_t sizeOfFile;
+	int32_t iter = 1;
+	int32_t ceo;
+	int32_t ostatak;
 
-	//ocisti revbuf i revbufLong
+	/*ciscenje bafera*/
 	memset(revbuf, 0, BUFLEN);
-	memset(revbufLong, 0, BUFLEN);
 
-	//primi ime fajla
+	/*primanje imena fajla*/
 	if ((recvNameSize = recv(s, fr_name, sizeof(fr_name), 0)) == SOCKET_ERROR)
 	{
 		puts("Name of the file recv() failed");
 	}
-	//ispisi primljenu duzinu
 	printf("velicina imena fajla: %d\t---------->\t", recvNameSize);
-	//skrati string
+
+	/*skracivanje stringa*/
 	fr_name[recvNameSize] = '\0';
 
-	//ispisi ime fajla
 	puts(fr_name);
 
-	//otvori fajl za pisanje sa primnjenim imenom
+	/*otvaranje fajla za pisanje sa primnjenim imenom*/
 	FILE *fr = fopen(fr_name, "wb");
 	if (fr == NULL)
 	{
 		printf("File %s cannot be opened!\n", fr_name);
 	}
 
-	//primi velicinu fajla
+	/*primanje velicine fajla*/
 	if ((recvSizeSize = recv(s, &sizeOfFile, sizeof(sizeOfFile), 0)) == SOCKET_ERROR)
 	{
 		puts("Name of the file recv() failed");
@@ -289,62 +270,59 @@ void receiveFile()
 	printf("PRIMLJENA velicina fajla: %ld\n\n", sizeOfFile);
 
 
-	//vrati na pocetak
+	/*vracanje na pocetak fajla*/
 	fseek(fr, 0, SEEK_SET);
 
-	ceo = sizeOfFile / BUFLEN;	//ovde mi ostaje 255
-	ostatak = sizeOfFile % BUFLEN;	//ovde mi ostaje ostatak (479)
+	/*racunanje celog dela i ostatka datog fajla*/
+	ceo = sizeOfFile / BUFLEN;	
+	ostatak = sizeOfFile % BUFLEN;	
 
 	printf("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak);
 
-
-	//while u kom primam fajl
+	/*petlja u kojoj se prima fajl*/
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
 		Sleep(SLEEP_TIME);
 		
-		
+		/*ovde pristizu podaci koji su enkriptovani*/
 		for (i = 0; i < fr_block_sz; i++)
 		{
 			recv(s, &en[i], sizeof(en[i]), 0);
 			en[i] = ntohl(en[i]);
 		}
 
-
 		Sleep(SLEEP_TIME);
 
-
+		/*dekripcija*/
 		decrypt();
 		
-
-		//*******************************************************************************************
 		Sleep(SLEEP_TIME);
-		//pisanje u fajl
+		
+		/*pisanje u fajl dekriptovanih podataka*/
 		fwrite(sdbuf, sizeof(char), fr_block_sz, fr);
-		Sleep(SLEEP_TIME);
-		//ispisi velicinu primljenog paketa
-		printf("%d\t", fr_block_sz);
-		//ocisti revbuf
-		memset(revbuf, 0, BUFLEN);
-		memset(revbufLong, 0, BUFLEN);
 
+		Sleep(SLEEP_TIME);
+
+		/*velicina primljenog paketa*/
+		printf("%d\t", fr_block_sz);
+
+		/*ciscenje bafera za naredno koriscenje*/
+		memset(revbuf, 0, BUFLEN);
 		memset(sdbuf, 0, BUFLEN);
 		memset(en, 0, BUFLEN);
 
+		/*provera da li je stigao poslednji paket; ako jeste izadji iz petlje*/
 		if (fr_block_sz < sizeof(revbuf))
 		{
 			break;
 		}
 	}
 
-
-
+	/*zatvaranje primljenog fajla*/
 	fclose(fr);
 }
 
-//*********************************************************************************
-//*********************************************************************************
-
+/*funkcija za dekripciju*/
 void decrypt()
 {
 	int key = d[numOfEncAndDec];
@@ -352,7 +330,6 @@ void decrypt()
 
 	for (i = 0; i < BUFLEN; i++)
 	{
-		//ovde ne valja!!!
 		ct = en[i];
 		k = 1;
 		for (j = 0; j < key; j++)
@@ -365,11 +342,7 @@ void decrypt()
 	sdbuf[i] = -1;
 }
 
-//*********************************************************************************
-//*********************************************************************************
-//*********************************************************************************
-//*********************************************************************************
-
+/*funckija u kojoj se proverava da li je broj prost*/
 uint32_t prime(uint32_t pr)
 {
 	uint32_t iter2;
@@ -385,6 +358,7 @@ uint32_t prime(uint32_t pr)
 	return 1;
 }
 
+/*funkcija u kojoj se racunaju privatni i javni kljucevi*/
 void ce()
 {
 	uint32_t k = 0;
@@ -417,6 +391,7 @@ void ce()
 	}
 }
 
+/*pomocna funkcija za racunanje privatnih kljuceva*/
 uint32_t cd(uint32_t x)
 {
 	uint32_t k = 1;
