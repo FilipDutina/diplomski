@@ -1,3 +1,10 @@
+/*makro za izbacivanje printf() funkcije iz koda*/
+#if 1
+	#define PRINT(a) printf a
+#else
+	#define PRINT(a) (void)0
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,7 +73,7 @@ int main()
 	flag = prime(p);
 	if (flag == 0)
 	{
-		printf("\nWRONG INPUT 1\n");
+		PRINT(("\nWRONG INPUT 1\n"));
 		exit(1);
 	}
 
@@ -75,7 +82,7 @@ int main()
 	flag = prime(q);
 	if (flag == 0 || p == q)
 	{
-		printf("\nWRONG INPUT 2\n");
+		PRINT(("\nWRONG INPUT 2\n"));
 		exit(1);
 	}
 
@@ -87,25 +94,25 @@ int main()
 		q = tempo;
 	}
 
-	printf("Primes are -%d- and -%d-\n\n", p, q);
+	PRINT(("Primes are -%d- and -%d-\n\n", p, q));
 
 	n = p * q;
 	phi = (p - 1)*(q - 1);
 	
 	ce();
 	
-	printf("POSSIBLE VALUES OF e AND d ARE:");
+	PRINT(("POSSIBLE VALUES OF e AND d ARE:"));
 	for (i = 0; i < j - 1; i++)
 	{
-		printf("\n%d.\t%d\t%ld",i, e[i], d[i]);
+		PRINT(("\n%d.\t%d\t%ld",i, e[i], d[i]));
 	}
-	puts("\n\n");
+	PRINT(("\n\n"));
 
 	/*izmedju 0 i 22*/
 	numOfEncAndDec = rand() % NUM_OF_KEYS;
 
-	printf("numOfEncAndDec is: %d\n", numOfEncAndDec);
-	printf("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]);
+	PRINT(("numOfEncAndDec is: %d\n", numOfEncAndDec));
+	PRINT(("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]));
 
 	/*promenljive koje se koriste za komunikaciju*/
 	WSADATA wsa;
@@ -117,58 +124,58 @@ int main()
 	int32_t numOfFilesToBeReceived;
 
 	/*funkcije za konekciju*/
-	printf("\nInitialising Winsock...");
+	PRINT(("\nInitialising Winsock..."));
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
-		printf("Failed. Error Code : %d", WSAGetLastError());
+		PRINT(("Failed. Error Code : %d", WSAGetLastError()));
 		return 1;
 	}
-	printf("Initialised.\n");
+	PRINT(("Initialised.\n"));
 
 	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
-		printf("Could not create socket : %d", WSAGetLastError());
+		PRINT(("Could not create socket : %d", WSAGetLastError()));
 	}
-	printf("Socket created.\n");
+	PRINT(("Socket created.\n"));
 
 	server.sin_family = AF_INET;
 	server.sin_port = htons(SWU_BR_SERVERPORT);
 	server.sin_addr.s_addr = inet_addr(zFAS_IPv4);
 
 	/*konekcija na zFAS plocu*/
-	puts("Connect to remote server");
+	PRINT(("Connect to remote server\n"));
 	if (connect(s, (struct sockaddr*)&server, sizeof(server)) < 0)
 	{
-		printf("Failed. Error Code : %d\n", WSAGetLastError());
+		PRINT(("Failed. Error Code : %d\n", WSAGetLastError()));
 		exit(EXIT_FAILURE);
 	}
-	puts("Connected");
+	PRINT(("Connected"));
 
 	/*slanje inicijalne poruke*/
 	if (send(s, message, strlen(message), 0) < 0)
 	{
-		puts("Send failed");
+		PRINT(("Send failed\n"));
 		exit(EXIT_FAILURE);
 	}
-	puts("Data sent\n");
+	PRINT(("Data sent\n\n"));
 
 	/*primanje odgovora od zFAS ploce*/
 	if ((recvSize = recv(s, serverReply, BUFLEN, 0)) == SOCKET_ERROR)
 	{
-		puts("recv failed");
+		PRINT(("recv failed\n"));
 	}
-	puts("Reply received\n");
+	PRINT(("Reply received\n\n"));
 
 	/*dodavanje NULL terminatora na kraj stringa*/
-	printf("server replay: %d\n", recvSize);
+	PRINT(("server replay: %d\n", recvSize));
 	serverReply[recvSize] = '\0';
-	puts(serverReply);
-	puts("\n");
+	PRINT(("%s\n", serverReply));
+	PRINT(("\n\n"));
 
 	if (strcmp(serverReply, respondOK) == 0)
 	{
-		puts("We are connected now, CHEERS! :)\n\n");
-		puts("*****************************************************************************");
+		PRINT(("We are connected now, CHEERS! :)\n\n\n"));
+		PRINT(("*****************************************************************************\n"));
 	}
 
 	/*slanje javnih kljuceva ploci*/
@@ -179,41 +186,41 @@ int main()
 
 	if (send(s, &NETWORKmodulus, sizeof(NETWORKmodulus), 0) == SOCKET_ERROR)
 	{
-		printf("MODULUS send() FAILED!\n\n");
+		PRINT(("MODULUS send() FAILED!\n\n"));
 	}
-	puts("MODULUS is sent!\n");
+	PRINT(("MODULUS is sent!\n\n"));
 
 	Sleep(SLEEP_TIME);
 
 	if (send(s, &NETWORKexponent, sizeof(NETWORKexponent), 0) == SOCKET_ERROR)
 	{
-		printf("EXPONENT send() FAILED!\n\n");
+		PRINT(("EXPONENT send() FAILED!\n\n"));
 	}
-	puts("EXPONENT is sent!\n");
+	PRINT(("EXPONENT is sent!\n\n"));
 
 	Sleep(SLEEP_TIME);
 
 	/*primanje broja fajlova koje ploca salje*/
 	if ((recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0)) == SOCKET_ERROR)
 	{
-		puts("Num of files recv() failed");
+		PRINT(("Num of files recv() failed"));
 	}
 	numOfFilesToBeReceived = ntohl(numOfFilesToBeReceived);
-	printf("Broj fajlova koje primam: %d\n\n\n", numOfFilesToBeReceived);
+	PRINT(("Broj fajlova koje primam: %d\n\n\n", numOfFilesToBeReceived));
 
 	/*for petlja u kojoj pozivam funkciju receiveFile() za svaki fajl posebno*/
 	for (int i = numOfFilesToBeReceived; i > 0; i--)
 	{
 		Sleep(SLEEP_TIME);
 
-		printf("Primam fajl broj: %d\n", i);
+		PRINT(("Primam fajl broj: %d\n", i));
 
 		receiveFile();
 
-		puts("\n\n");
+		PRINT(("\n\n\n"));
 	}
 
-	puts("\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n\n\n");
+	PRINT(("\n\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n\n\n\n"));
 
 	/*zatvaranje soketa*/
 	closesocket(s);
@@ -243,31 +250,31 @@ void receiveFile()
 	/*primanje imena fajla*/
 	if ((recvNameSize = recv(s, fr_name, sizeof(fr_name), 0)) == SOCKET_ERROR)
 	{
-		puts("Name of the file recv() failed");
+		PRINT(("Name of the file recv() failed\n"));
 	}
-	printf("velicina imena fajla: %d\t---------->\t", recvNameSize);
+	PRINT(("velicina imena fajla: %d\t---------->\t", recvNameSize));
 
 	/*skracivanje stringa*/
 	fr_name[recvNameSize] = '\0';
 
-	puts(fr_name);
+	PRINT(("%s\n", fr_name));
 
 	/*otvaranje fajla za pisanje sa primnjenim imenom*/
 	FILE *fr = fopen(fr_name, "wb");
 	if (fr == NULL)
 	{
-		printf("File %s cannot be opened!\n", fr_name);
+		PRINT(("File %s cannot be opened!\n", fr_name));
 	}
 
 	/*primanje velicine fajla*/
 	if ((recvSizeSize = recv(s, &sizeOfFile, sizeof(sizeOfFile), 0)) == SOCKET_ERROR)
 	{
-		puts("Name of the file recv() failed");
+		PRINT(("Name of the file recv() failed\n"));
 	}
 
 	sizeOfFile = ntohl(sizeOfFile);
 
-	printf("PRIMLJENA velicina fajla: %ld\n\n", sizeOfFile);
+	PRINT(("PRIMLJENA velicina fajla: %ld\n\n", sizeOfFile));
 
 
 	/*vracanje na pocetak fajla*/
@@ -277,7 +284,7 @@ void receiveFile()
 	ceo = sizeOfFile / BUFLEN;	
 	ostatak = sizeOfFile % BUFLEN;	
 
-	printf("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak);
+	PRINT(("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak));
 
 	/*petlja u kojoj se prima fajl*/
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
@@ -304,7 +311,7 @@ void receiveFile()
 		Sleep(SLEEP_TIME);
 
 		/*velicina primljenog paketa*/
-		printf("%d\t", fr_block_sz);
+		PRINT(("%d\t", fr_block_sz));
 
 		/*ciscenje bafera za naredno koriscenje*/
 		memset(revbuf, 0, BUFLEN);

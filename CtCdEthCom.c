@@ -1,3 +1,10 @@
+/*makro za izbacivanje printf() funkcije iz koda*/
+#if 0
+	#define PRINT(a) printf a
+#else
+	#define PRINT(a) (void)0
+#endif
+
 #include "MemMap.h" /* PRQA S 5087 */ /* MD_MSR_19.1 */
 #include "Rte_CtCdEthCom.h"
 #include "Sl_WaitUS.h"
@@ -28,7 +35,6 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <msgQLib.h>
-#include <fioLib.h>
 #include <sockLib.h>
 #include <types.h>
 #include <socket.h>
@@ -46,7 +52,7 @@
 #include <timerLib.h>
 #include <dirent.h>
 #include <stat.h>
-#include <zlib.h>
+
 
 #define RTE_STOP_SEC_CTCDETHCOM_APPL_CODE
 #define RTE_START_SEC_CTCDETHCOM_APPL_CODE
@@ -60,35 +66,36 @@
 #define BACKLOG 10
 
 /*baferi za enkripciju*/
-uint8_t sdbuf[BUFLEN];
-uint32_t en[BUFLEN];
+static uint8_t sdbuf[BUFLEN];
+static uint32_t en[BUFLEN];
 
 /*javni kljucevi za enkripciju*/
-uint32_t publicKey, n;
+static uint32_t publicKey, n;
 
 /**/
-MSG_Q_ID messages;
-TASK_ID task;
+static MSG_Q_ID messages;
+static TASK_ID task;
+static char nameOfTask[] = "task1";
 
 /*promenljive koje se koriste za komunikaciju sa racunarom*/
-struct sockaddr_in server, client;
-int32_t s, newSocket, c, recvSize;
-char replyBuffer[BUFLEN];
+static struct sockaddr_in server, client;
+static int32_t s, newSocket, c, recvSize;
+static char replyBuffer[BUFLEN];
 
 /*flag na osnovu koga se menja stanje*/
-int32_t changeState;	
+static int32_t changeState;	
 
 /*poruke za komunikaciju*/
-char message[] = "Start";
-char respondOK[] = "Let's communicate!";
-char respondNotOK[] = "Communication breakdown...";
+static char message[] = "Start";
+static char respondOK[] = "Let's communicate!";
+static char respondNotOK[] = "Communication breakdown...";
 
 /*deklaracije funkcija*/
 static void backgroundTask(void);
-void receivePublicKeys();
-void sendFile(char fs_name[]);
-int32_t numOfFiles();
-void encrypt();
+static void receivePublicKeys(void);
+static void sendFile(const char fs_name[]);
+static int32_t numOfFiles(void);
+static void encrypt(void);
 
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void) 
@@ -97,7 +104,7 @@ FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void)
 	messages = msgQCreate(BUFLEN, BUFLEN, MSG_Q_FIFO);
 	changeState = 1;
 	
-	task = taskCreate("task1", 115, VX_FP_TASK, 0x8000U, (FUNCPTR)backgroundTask, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	task = taskCreate(nameOfTask, 115, VX_FP_TASK, 0x8000U, (FUNCPTR)backgroundTask, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	taskActivate(task);
 }
 
@@ -113,6 +120,10 @@ FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComCyclic(void) /* PRQA S 0850 */ /* MD
 static void backgroundTask(void)
 {
 	int32_t msg;
+	
+	struct timespec nsTime;
+	nsTime.tv_sec = 0;
+	nsTime.tv_nsec = 500000000;
   
 	while(1)
 	{
@@ -124,13 +135,14 @@ static void backgroundTask(void)
 			changeState = 2;
 			
 			/*kreiranje soketa*/
-			if((s = socket(AF_INET, SOCK_STREAM, 0 )) == SOCKET_ERROR)
+			s = socket(AF_INET, SOCK_STREAM, 0);
+			if(s == SOCKET_ERROR)
 			{
-				printf("Could not create socket!\n");
+				PRINT(("Could not create socket!\n"));
 			}
-			printf("\n\n\nSocket created.\n");
+			PRINT(("\n\n\nSocket created.\n"));
 			
-			memset((char*)&server, 0, sizeof(server));
+			(void)memset((char*)&server, 0, sizeof(server));
 			server.sin_family = AF_INET;
 			server.sin_addr.s_addr = INADDR_ANY;
 			server.sin_port = htons(SWU_BR_SERVERPORT);
@@ -138,17 +150,17 @@ static void backgroundTask(void)
 			/*bindovanje*/
 			if( bind(s,(struct sockaddr*)&server , sizeof(server)) == SOCKET_ERROR)
 			{
-				printf("Bind failed: %s\n", strerror(errno)); 
+				PRINT(("Bind failed: %s\n", strerror(errno))); 
 				//return 1;
 			}
 			 
-			puts("Bind done!");
-			printf("Listetning...\n");
+			PRINT(("Bind done!\n"));
+			PRINT(("Listetning...\n"));
 			
 			/*slusanje*/
-			listen(s, BACKLOG);
+			(void)listen(s, BACKLOG);
 			
-			puts("Waiting for incoming connections...\n\n\n\n");
+			PRINT(("Waiting for incoming connections...\n\n\n\n\n"));
 			
 			c = sizeof(struct sockaddr_in);
 			
@@ -156,36 +168,36 @@ static void backgroundTask(void)
 			newSocket = accept(s ,(struct sockaddr*)&client, &c);
 			if (newSocket == SOCKET_ERROR)
 			{
-				printf("Accept failed with error!\n");
+				PRINT(("Accept failed with error!\n"));
 			}
-			puts("Connection accepted!");
+			PRINT(("Connection accepted!"));
 			
 			/*primanje inicijalne poruke od racunara*/
-			if ((recvSize = recv(newSocket, replyBuffer, BUFLEN, 0)) == SOCKET_ERROR)
+			recvSize = recv(newSocket, replyBuffer, BUFLEN, 0);
+			if (recvSize == SOCKET_ERROR)
 			{
-				puts("Recv from client failed!");
+				PRINT(("Recv from client failed!\n"));
 			}
-			puts("Reply received --------->");
+			PRINT(("Reply received --------->\n"));
 
 			/*terminacija stringa na kraju*/
 			replyBuffer[recvSize] = '\0';
-			puts(replyBuffer);
-			puts("\n");
+			PRINT(("%s\n\n\n" ,replyBuffer));
 			
 			/*uporedjivanje stringova*/
 			if(strcmp(replyBuffer, message) == 0)
 			{
 				if(send(newSocket, respondOK, strlen(respondOK), 0) == SOCKET_ERROR)
 				{
-					printf("First send() failed\n");
+					PRINT(("First send() failed\n"));
 				}
-				puts("Everything is fine, let's chat!\n\n");
+				PRINT(("Everything is fine, let's chat!\n\n\n"));
 			}
 			else
 			{
 				if(send(newSocket, respondNotOK, strlen(respondOK), 0) == SOCKET_ERROR)
 				{
-					printf("Second send() failed\n");
+					PRINT(("Second send() failed\n"));
 				}
 			}
 			
@@ -200,9 +212,9 @@ static void backgroundTask(void)
 			/*slanje broja fajlova*/
 			if(send(newSocket, &networkFilesNum, sizeof(networkFilesNum), 0) == SOCKET_ERROR)
 			{
-				printf("Number of files send() FAILED!\n\n");
+				PRINT(("Number of files send() FAILED!\n\n"));
 			}
-			puts("Number of files is sent!\n");
+			PRINT(("Number of files is sent!\n\n"));
 			
 			DIR* dirp;
 			struct dirent* direntp;
@@ -211,9 +223,9 @@ static void backgroundTask(void)
 			
 			/*putanja na kojoj se nalaze fajlovi koje najpre treba enkriptovati pa zatim i poslati racunaru*/
 			dirp = opendir("/mmc0:4/a");
-			if(dirp == NULL)
+			if(dirp == (void*)0)
 			{
-				puts("Error opening dir!\n\n");
+				PRINT(("Error opening dir!\n\n\n"));
 			}
 			else
 			{
@@ -222,194 +234,202 @@ static void backgroundTask(void)
 					/*otvaranje direktorijuma*/
 					direntp = readdir(dirp);
 					 
-					if(direntp == NULL)
+					if(direntp == (void*)0)
 					{
 						break;
 					}
 					
-					if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
+					if(strcmp(direntp->d_name, ".") != 0)
 					{
-						/*ciscenje bafera*/
-						memset(tempStr, 0, BUFLEN);
-						
-						/*kopiram ime fajla*/
-						strcpy(tempStr, direntp->d_name);
+						if(strcmp(direntp->d_name, "..") != 0)
+						{
+							/*ciscenje bafera*/
+							(void)memset(tempStr, 0, BUFLEN);
+							
+							/*kopiram ime fajla*/
+							(void)strcpy(tempStr, direntp->d_name);
 
-						puts("U FUNKCIJI GDE CITAM IMENA FAJLOVA:");
-						puts(tempStr);
-						
-						/*funkcija u kojoj prvo posaljem ime fajla pa zatim i sam fajl*/
-						sendFile(tempStr);
-						
+							PRINT(("U FUNKCIJI GDE CITAM IMENA FAJLOVA:\n"));
+							PRINT(("%s\n" ,tempStr));
+							
+							/*funkcija u kojoj prvo posaljem ime fajla pa zatim i sam fajl*/
+							sendFile(tempStr);
+						}
 					}
 				}
-				puts("");
+				PRINT(("\n\n"));
 				
 				/*zatvaranje direktorijuma*/
-				closedir(dirp);
+				(void)closedir(dirp);
 			}
 			
 			/*zatvaranje soketa*/
-			close(s);
-			close(newSocket);
+			(void)close(s);
+			(void)close(newSocket);
 			
 			/*prelazak u finalno stanje*/
-			msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);
+			(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);
 		}
-		else if(msg == 2)
+		else
 		{
-			puts("\n\n\n\nProgram se uspesno izvrsio i svi fajlovi su poslati!\n\n\n\n");
-			sleep(1);
+			PRINT(("\n\n\n\nProgram se uspesno izvrsio i svi fajlovi su poslati!\n\n\n\n\n"));
+			(void)nanosleep(&nsTime, (void*)0);
 		}
 	}
 }
 
 /*primi javne kljuceve neophodne za enkripciju*/
-void receivePublicKeys()
+static void receivePublicKeys(void)
 {
-	puts("---------------------------------------------- receivePublicKeys");
+	PRINT(("---------------------------------------------- receivePublicKeys\n"));
 	
 	/*vreme spavanja 0.05 sekundi*/
 	struct timespec nsTime;
 	nsTime.tv_sec = 0;
 	nsTime.tv_nsec = 50000000;
 	
-	uint64_t NETWORKmodulus;
-	uint64_t NETWORKexponent;
+	uint32_t NETWORKmodulus;
+	uint32_t NETWORKexponent;
 	
-	nanosleep(&nsTime, NULL);
+	(void)nanosleep(&nsTime, (void*)0);
 	
 	/*primi moduo*/
-	if ((recvSize = recv(newSocket, &NETWORKmodulus, sizeof(NETWORKmodulus), 0)) == SOCKET_ERROR)
+	recvSize = recv(newSocket, &NETWORKmodulus, sizeof(NETWORKmodulus), 0);
+	if (recvSize == SOCKET_ERROR)
 	{
-		puts("Recv from client failed!");
+		PRINT(("Recv from client failed!\n"));
 	}
-	puts("MODULUS received!");
+	PRINT(("MODULUS received!\n"));
 	
-	nanosleep(&nsTime, NULL);
+	(void)nanosleep(&nsTime, (void*)0);
 	
 	/*primi eksponent*/
-	if ((recvSize = recv(newSocket, &NETWORKexponent, sizeof(NETWORKexponent), 0)) == SOCKET_ERROR)
+	recvSize = recv(newSocket, &NETWORKexponent, sizeof(NETWORKexponent), 0);
+	if (recvSize  == SOCKET_ERROR)
 	{
-		puts("Recv from client failed!");
+		PRINT(("Recv from client failed!\n"));
 	}
-	puts("EXPONENT received!");
+	PRINT(("EXPONENT received!\n"));
 	
-	nanosleep(&nsTime, NULL);
+	(void)nanosleep(&nsTime, (void*)0);
 	
 	n = ntohl(NETWORKmodulus);
 	publicKey = ntohl(NETWORKexponent);
 	
-	printf("\nPublic Key:\n\te[0]: %d\n\t(p * q): %d\n\n", publicKey, n);
+	PRINT(("\nPublic Key:\n\te[0]: %d\n\t(p * q): %d\n\n", publicKey, n));
 }
 
 /*slanje enkriptovanog fajla*/
-void sendFile(char fs_name[])
+static void sendFile(const char fs_name[])
 {
 	struct timespec nsTime;
 	nsTime.tv_sec = 0;
 	nsTime.tv_nsec = 50000000;
 	
 	char tempDir[BUFLEN];
-	int64_t fileLentgh;
-	int32_t blockSize, i;
+	int64_t fileLentgh, convertedNumber;
+	uint32_t blockSize, i;
 	
-	printf("Pre slanja imena fajla: %s\n", fs_name);
+	PRINT(("Pre slanja imena fajla: %s\n", fs_name));
 	
-	nanosleep(&nsTime, NULL);
+	(void)nanosleep(&nsTime, (void*)0);
 	
 	/*slanje imena fajla (bez putanje)*/
 	if(send(newSocket, fs_name, strlen(fs_name), 0) == SOCKET_ERROR)
 	{
-		printf("Name of the file send() FAILED!\n\n");
+		PRINT(("Name of the file send() FAILED!\n\n"));
 	}
-	nanosleep(&nsTime, NULL);
+	
+	(void)nanosleep(&nsTime, (void*)0);
 
-	puts("Name of the file is sent\n\n");
-	printf("size of name sent: %d\n", strlen(fs_name));
+	PRINT(("Name of the file is sent\n\n\n"));
+	PRINT(("size of name sent: %d\n", strlen(fs_name)));
 	
 	/*ciscenje bafera*/
-	memset(tempDir, 0, BUFLEN);
+	(void)memset(tempDir, 0, BUFLEN);
 	
 	/*dodavanje putanje*/
-	strcpy(tempDir, "/mmc0:4/a/");
+	(void)strcpy(tempDir, "/mmc0:4/a/");
 	
 	//spajanje imena fajla i zeljene putanje
-	strcat(tempDir, fs_name);
-	printf("NAKON SPAJANJA PUTANJE I IMENA FAJLA: %s", tempDir);
-	puts("");
+	(void)strcat(tempDir, fs_name);
+	PRINT(("NAKON SPAJANJA PUTANJE I IMENA FAJLA: %s\n", tempDir));
 	
-	printf("Sending %s to the client... \n\n", tempDir);
+	PRINT(("Sending %s to the client... \n\n", tempDir));
 	
 	/*otvaranje fajla*/
 	FILE *fs = fopen(tempDir, "rb");
-	if(fs == NULL)
+	if(fs == (void*)0)
 	{
-		printf("ERROR: File %s not found.\n", tempDir);
+		PRINT(("ERROR: File %s not found.\n", tempDir));
 	}
 	
 	/*trazenje velicine trenutnog fajla*/
-	fseek(fs, 0, SEEK_END);
+	(void)fseek(fs, 0, SEEK_END);
 	fileLentgh = ftell(fs);
-	fseek(fs, 0, SEEK_SET);
+	(void)fseek(fs, 0, SEEK_SET);
 	
-	printf("Velicina fajla koji se salje je: %lld\n\n\n", fileLentgh);
+	PRINT(("Velicina fajla koji se salje je: %lld\n\n\n", fileLentgh));
 	
 	/*slanje velicine tekuceg fajla*/
-	long convertedNumber = htonl(fileLentgh);
+	convertedNumber = htonl(fileLentgh);
 	if(send(newSocket, &convertedNumber, sizeof(convertedNumber), 0) == SOCKET_ERROR)
 	{
-		printf("Name of the file send() FAILED!\n\n");
+		PRINT(("Name of the file send() FAILED!\n\n"));
 	}
-	puts("Size of file is sent!\n");
+	PRINT(("Size of file is sent!\n\n"));
 	
 	/*ciscenje bafera*/
-	memset(sdbuf, NULL, BUFLEN); 
-	memset(en, NULL, BUFLEN);
+	(void)memset(sdbuf, NULL, BUFLEN); 
+	(void)memset(en, NULL, BUFLEN);
 	
 	/*citanje fajla*/
-	while((blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs)) != '\0')
+	blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs);
+	while(blockSize != (uint32_t)0)
 	{
-		nanosleep(&nsTime, NULL);
+		(void)nanosleep(&nsTime, (void*)0);
 		
-		printf("%d\t", blockSize);
+		PRINT(("%d\t", blockSize));
 		
-		nanosleep(&nsTime, NULL);
+		(void)nanosleep(&nsTime, (void*)0);
 		
 		/*E N K R I P C I J A*/
 		encrypt();
 		
-		//SLANJE FAJLA
-		if(send(newSocket, en, blockSize, 0) < 0)
+		/*SLANJE FAJLA*/
+		
+		if(send(newSocket, en, blockSize, 0) == SOCKET_ERROR)
 		{
-			fprintf(stderr, "ERROR: Failed to send file %s. (errno = %d)\n", tempDir, errno);
+			PRINT(("ERROR: Failed to send file %s!\n", tempDir));
 			break;
 		}
 		
-		nanosleep(&nsTime, NULL);
+		(void)nanosleep(&nsTime, (void*)0);
 		
 		/*validno slanje fajla, jer saljem bafer koji je popunjem int32_t vrednostima, pa moram slati jedan po jedan element, a ne sve zajedno u baferu*/
 		for(i = 0; i < blockSize; i++)
 		{
 			en[i] = htonl(en[i]);
-			send(newSocket, &en[i], sizeof(en[i]), 0);
+			(void)send(newSocket, &en[i], sizeof(en[i]), 0);
 		}
 		
 		/*ciscenje*/
-		memset(sdbuf, NULL, BUFLEN); 
-		memset(en, NULL, BUFLEN); 
+		(void)memset(sdbuf, NULL, BUFLEN); 
+		(void)memset(en, NULL, BUFLEN); 
+		
+		blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs);
 		
 	}
 	
-	printf("\n\nOk! File %s from server was sent!\n\n", tempDir);
+	PRINT(("\n\nOk! File %s from server was sent!\n\n", tempDir));
 	
-	fclose(fs);
+	(void)fclose(fs);
 	
-	nanosleep(&nsTime, NULL);
+	(void)nanosleep(&nsTime, (void*)0);
 }
 
 /*funkcija za brojanje fajlova u direktorijumu*/
-int32_t numOfFiles()
+static int32_t numOfFiles(void)
 {
 	/*brojac fajlova*/
 	int32_t fileCounter = 0;
@@ -418,9 +438,9 @@ int32_t numOfFiles()
 	struct dirent* direntp;
 	
 	dirp = opendir("/mmc0:4/a");
-	if(dirp == NULL)
+	if(dirp == (void*)0)
 	{
-		puts("error opening dir!\n\n");
+		PRINT(("Error opening dir!\n\n\n"));
 	}
 	else
 	{
@@ -428,31 +448,36 @@ int32_t numOfFiles()
 		{
 			direntp = readdir(dirp);
 					 
-			if(direntp == NULL)
+			if(direntp == (void*)0)
 			{
 				break;
 			}
 			
-			if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
+			/*broji sve fajlove osim "." i ".."*/
+			if(strcmp(direntp->d_name, ".") != 0)
 			{
-				fileCounter++;
+				if(strcmp(direntp->d_name, "..") != 0)
+				{
+					fileCounter++;
+				}
 			}
 		}
 		
-		closedir(dirp);
+		(void)closedir(dirp);
 	}
 	
-	printf("Nalazim se u funkciji numOfFiles() i izbrojao sam %d fajlova\n\n", fileCounter);
+	PRINT(("Nalazim se u funkciji numOfFiles() i izbrojao sam %d fajlova\n\n", fileCounter));
 	
 	return fileCounter;
 }
 
 /*enkripcija*/
-void encrypt()
+static void encrypt(void)
 {
-	int32_t pt, k, iter, j;
+	uint32_t pt, iter, j, k, temp;
+	temp = BUFLEN;
 
-	for(iter = 0; iter < BUFLEN; iter++)
+	for(iter = 0; iter < temp; iter++)
 	{
 		//uzima vrednost trenutnog bajta
 		pt = sdbuf[iter];
