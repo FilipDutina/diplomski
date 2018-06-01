@@ -94,7 +94,7 @@ int main()
 		q = tempo;
 	}
 
-	PRINT(("Primes are -%d- and -%d-\n\n", p, q));
+	PRINT(("Primes are -%d- and -%d-, and p*q is -%d-\n\n", p, q, p*q));
 
 	n = p * q;
 	phi = (p - 1)*(q - 1);
