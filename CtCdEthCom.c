@@ -64,7 +64,7 @@
 #define SOCKET_ERROR -1
 #define BUFLEN 512
 #define BACKLOG 10
-#define NULL_PTR (void*)(0)
+#define NULL_POINTER (void*)(0)
 #define htonl_num(n) (((((n) & 0x000000ffU)) << 24U) | \
                   ((((n) & 0x0000ff00U)) << 8U) | \
                   ((((n) & 0x00ff0000U)) >> 8U) | \
@@ -226,7 +226,7 @@ static void backgroundTask(void)
 			
 			/*putanja na kojoj se nalaze fajlovi koje najpre treba enkriptovati pa zatim i poslati racunaru*/
 			dirp = opendir("/mmc0:4/a");
-			if(dirp == NULL)
+			if(dirp == NULL_POINTER)
 			{
 				PRINT(("Error opening dir!\n\n\n"));
 			}
@@ -237,39 +237,42 @@ static void backgroundTask(void)
 					/*otvaranje direktorijuma*/
 					direntp = readdir(dirp);
 					 
-					if(direntp == NULL)
+					if(direntp == NULL_POINTER)
 					{
 						break;
 					}
 					
-					if((strcmp(direntp->d_name, ".") != 0) && (strcmp(direntp->d_name, "..") != 0))
+					if(strcmp(direntp->d_name, ".") != 0)
 					{
-						/*ciscenje bafera*/
-						memset(tempStr, 0, BUFLEN);
-						
-						/*kopiram ime fajla*/
-						strcpy(tempStr, direntp->d_name);
+						if(strcmp(direntp->d_name, "..") != 0)
+						{
+							/*ciscenje bafera*/
+							(void)memset(tempStr, 0, BUFLEN);
+							
+							/*kopiram ime fajla*/
+							(void)strcpy(tempStr, direntp->d_name);
 
-						PRINT(("U FUNKCIJI GDE CITAM IMENA FAJLOVA:"));
-						PRINT(("%s\n", tempStr));
-						
-						/*funkcija u kojoj prvo posaljem ime fajla pa zatim i sam fajl*/
-						sendFile(tempStr);
+							PRINT(("U FUNKCIJI GDE CITAM IMENA FAJLOVA:"));
+							PRINT(("%s\n", tempStr));
+							
+							/*funkcija u kojoj prvo posaljem ime fajla pa zatim i sam fajl*/
+							sendFile(tempStr);
+						}
 						
 					}
 				}
 				PRINT(("\n"));
 				
 				/*zatvaranje direktorijuma*/
-				closedir(dirp);
+				(void)closedir(dirp);
 			}
 			
 			/*zatvaranje soketa*/
-			close(s);
-			close(newSocket);
+			(void)close(s);
+			(void)close(newSocket);
 			
 			/*prelazak u finalno stanje*/
-			msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);
+			(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);
 		}
 		else
 		{
@@ -290,7 +293,7 @@ static void receivePublicKeys(void)
 	
 	uint64_t NETWORKmodulus, NETWORKexponent;
 	
-	(void)nanosleep(&nsTime, NULL_PTR);
+	(void)nanosleep(&nsTime, NULL_POINTER);
 	
 	/*primi moduo*/
 	recvSize = recv(newSocket, &NETWORKmodulus, sizeof(NETWORKmodulus), 0);
@@ -300,7 +303,7 @@ static void receivePublicKeys(void)
 	}
 	PRINT(("MODULUS received!\n"));
 	
-	(void)nanosleep(&nsTime, NULL_PTR);
+	(void)nanosleep(&nsTime, NULL_POINTER);
 	
 	/*primi eksponent*/
 	recvSize = recv(newSocket, &NETWORKexponent, sizeof(NETWORKexponent), 0);
@@ -310,7 +313,7 @@ static void receivePublicKeys(void)
 	}
 	PRINT(("EXPONENT received!\n"));
 	
-	(void)nanosleep(&nsTime, NULL_PTR);
+	(void)nanosleep(&nsTime, NULL_POINTER);
 	
 	n = ntohl_num(NETWORKmodulus);
 	publicKey = ntohl_num(NETWORKexponent);
@@ -331,7 +334,7 @@ static void sendFile(const char fs_name[])
 	
 	PRINT(("Pre slanja imena fajla: %s\n", fs_name));
 	
-	(void)nanosleep(&nsTime, NULL_PTR);
+	(void)nanosleep(&nsTime, NULL_POINTER);
 	
 	/*slanje imena fajla (bez putanje)*/
 	if(send(newSocket, fs_name, strlen(fs_name), 0) == SOCKET_ERROR)
@@ -339,7 +342,7 @@ static void sendFile(const char fs_name[])
 		PRINT(("Name of the file send() FAILED!\n\n"));
 	}
 	
-	(void)nanosleep(&nsTime, NULL_PTR);
+	(void)nanosleep(&nsTime, NULL_POINTER);
 
 	PRINT(("Name of the file is sent\n\n\n"));
 	PRINT(("size of name sent: %d\n", strlen(fs_name)));
@@ -358,7 +361,7 @@ static void sendFile(const char fs_name[])
 	
 	/*otvaranje fajla*/
 	FILE *fs = fopen(tempDir, "rb");
-	if(fs == NULL_PTR)
+	if(fs == NULL_POINTER)
 	{
 		PRINT(("ERROR: File %s not found.\n", tempDir));
 	}
@@ -386,11 +389,11 @@ static void sendFile(const char fs_name[])
 	blockSize = fread(sdbuf, sizeof(char), BUFLEN, fs);
 	while(blockSize != (uint32_t)0)
 	{
-		(void)nanosleep(&nsTime, NULL_PTR);
+		(void)nanosleep(&nsTime, NULL_POINTER);
 		
 		PRINT(("%d\t", blockSize));
 		
-		(void)nanosleep(&nsTime, NULL_PTR);
+		(void)nanosleep(&nsTime, NULL_POINTER);
 		
 		/*E N K R I P C I J A*/
 		encrypt();
@@ -403,7 +406,7 @@ static void sendFile(const char fs_name[])
 			break;
 		}
 		
-		(void)nanosleep(&nsTime, NULL_PTR);
+		(void)nanosleep(&nsTime, NULL_POINTER);
 		
 		/*validno slanje fajla, jer saljem bafer koji je popunjem int32_t vrednostima, pa moram slati jedan po jedan element, a ne sve zajedno u baferu*/
 		for(i = 0; i < blockSize; i++)
@@ -424,7 +427,7 @@ static void sendFile(const char fs_name[])
 	
 	(void)fclose(fs);
 	
-	(void)nanosleep(&nsTime, NULL_PTR);
+	(void)nanosleep(&nsTime, NULL_POINTER);
 }
 
 /*funkcija za brojanje fajlova u direktorijumu*/
@@ -437,7 +440,7 @@ static int32_t numOfFiles(void)
 	struct dirent* direntp;
 	
 	dirp = opendir("/mmc0:4/a");
-	if(dirp == NULL_PTR)
+	if(dirp == NULL_POINTER)
 	{
 		PRINT(("Error opening dir!\n\n\n"));
 	}
@@ -447,7 +450,7 @@ static int32_t numOfFiles(void)
 		{
 			direntp = readdir(dirp);
 					 
-			if(direntp == NULL_PTR)
+			if(direntp == NULL_POINTER)
 			{
 				break;
 			}
