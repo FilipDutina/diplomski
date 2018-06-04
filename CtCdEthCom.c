@@ -208,10 +208,10 @@ static void backgroundTask(void)
 			receivePublicKeys();
 			
 			/*broj fajlova u direktorijumu*/
-			int32_t filesNum = numOfFiles();
-			int32_t networkFilesNum;
+			uint32_t filesNum = (uint32_t)numOfFiles();
+			uint32_t networkFilesNum;
 			
-			networkFilesNum = htonl(filesNum);
+			networkFilesNum = (uint32_t)htonl_num(filesNum);
 			/*slanje broja fajlova*/
 			if(send(newSocket, &networkFilesNum, sizeof(networkFilesNum), 0) == SOCKET_ERROR)
 			{
