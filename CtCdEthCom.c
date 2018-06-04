@@ -1,5 +1,5 @@
 /*makro za izbacivanje printf() funkcije iz koda*/
-#if 0
+#if 1
 	#define PRINT(a) printf a
 #else
 	#define PRINT(a) (void)0
@@ -165,7 +165,7 @@ static void backgroundTask(void)
 			
 			PRINT(("Waiting for incoming connections...\n\n\n\n\n"));
 			
-			c = sizeof(struct sockaddr_in);
+			c = (int32_t)sizeof(struct sockaddr_in);
 			
 			/*prihvatanje komunikacije*/
 			newSocket = accept(s ,(struct sockaddr*)&client, &c);
@@ -176,7 +176,8 @@ static void backgroundTask(void)
 			PRINT(("Connection accepted!\n"));
 			
 			/*primanje inicijalne poruke od racunara*/
-			if ((recvSize = recv(newSocket, replyBuffer, BUFLEN, 0)) == SOCKET_ERROR)
+			recvSize = recv(newSocket, replyBuffer, BUFLEN, 0);
+			if (recvSize == SOCKET_ERROR)
 			{
 				PRINT(("Recv from client failed!\n"));
 			}
@@ -370,7 +371,7 @@ static void sendFile(const char fs_name[])
 	fileLentgh = (uint32_t)ftell(fs);
 	(void)fseek(fs, 0, SEEK_SET);
 	
-	PRINT(("Velicina fajla koji se salje je: %lld\n\n\n", fileLentgh));
+	PRINT(("Velicina fajla koji se salje je: %d\n\n\n", fileLentgh));
 	
 	/*slanje velicine tekuceg fajla*/
 	fileLentgh = htonl_num(fileLentgh);
