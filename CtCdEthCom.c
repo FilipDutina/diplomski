@@ -114,13 +114,13 @@ FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void)
 	changeState = 1;
 	
 	task = taskCreate("task1", 115, VX_FP_TASK, 0x8000U, (FUNCPTR)backgroundTask, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-	taskActivate(task);
+	(void)taskActivate(task);
 }
 
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComCyclic(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
-	msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL); //msg = 1
+	(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL); //msg = 1
 }
 
 /*DEFINICIJE FUNKCIJA*/
@@ -146,7 +146,7 @@ static void backgroundTask(void)
 			}
 			PRINT(("\n\n\nSocket created.\n"));
 			
-			memset((char*)&server, 0, sizeof(server));
+			(void)memset((char*)&server, 0, sizeof(server));
 			server.sin_family = AF_INET;
 			server.sin_addr.s_addr = INADDR_ANY;
 			server.sin_port = htons(SWU_BR_SERVERPORT);
@@ -161,7 +161,7 @@ static void backgroundTask(void)
 			PRINT(("Listetning...\n"));
 			
 			/*slusanje*/
-			listen(s, BACKLOG);
+			(void)listen(s, BACKLOG);
 			
 			PRINT(("Waiting for incoming connections...\n\n\n\n\n"));
 			
@@ -329,8 +329,7 @@ static void sendFile(const char fs_name[])
 	nsTime.tv_nsec = 50000000;
 	
 	char tempDir[BUFLEN];
-	uint32_t fileLentgh, convertedNumber;
-	uint32_t blockSize, i;
+	uint32_t blockSize, i, fileLentgh;
 	
 	PRINT(("Pre slanja imena fajla: %s\n", fs_name));
 	
