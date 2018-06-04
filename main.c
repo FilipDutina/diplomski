@@ -201,7 +201,8 @@ int main()
 	Sleep(SLEEP_TIME);
 
 	/*primanje broja fajlova koje ploca salje*/
-	if ((recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0)) == SOCKET_ERROR)
+	recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0);
+	if (recvSize == SOCKET_ERROR)
 	{
 		PRINT(("Num of files recv() failed"));
 	}
@@ -236,7 +237,7 @@ void receiveFile()
 {
 	uint8_t fr_name[BUFLEN];
 	uint8_t revbuf[BUFLEN];
-	int32_t fr_block_sz = 0;
+	uint32_t fr_block_sz = 0;
 	int32_t recvNameSize;
 	int32_t recvSizeSize;
 	int64_t sizeOfFile;
@@ -267,14 +268,15 @@ void receiveFile()
 	}
 
 	/*primanje velicine fajla*/
-	if ((recvSizeSize = recv(s, &sizeOfFile, sizeof(sizeOfFile), 0)) == SOCKET_ERROR)
+	recvSizeSize = recv(s, &sizeOfFile, sizeof(sizeOfFile), 0);
+	if (recvSizeSize == SOCKET_ERROR)
 	{
 		PRINT(("Name of the file recv() failed\n"));
 	}
 
 	sizeOfFile = ntohl(sizeOfFile);
 
-	PRINT(("PRIMLJENA velicina fajla: %ld\n\n", sizeOfFile));
+	PRINT(("PRIMLJENA velicina fajla: %lld\n\n", sizeOfFile));
 
 
 	/*vracanje na pocetak fajla*/
@@ -332,8 +334,8 @@ void receiveFile()
 /*funkcija za dekripciju*/
 void decrypt()
 {
-	int key = d[numOfEncAndDec];
-	int ct, k;
+	uint32_t key = d[numOfEncAndDec];
+	uint32_t ct, k;
 
 	for (i = 0; i < BUFLEN; i++)
 	{
@@ -353,7 +355,7 @@ void decrypt()
 uint32_t prime(uint32_t pr)
 {
 	uint32_t iter2;
-	j = sqrt(pr);
+	j = (uint32_t)sqrt(pr);
 
 	for (iter2 = 2; iter2 <= j; iter2++)
 	{
