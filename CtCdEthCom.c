@@ -1,6 +1,6 @@
 /*makro za izbacivanje printf() funkcije iz koda*/
-#if 1
-	#define PRINT(a) printf a
+#if 0
+	#define PRINT(a) printf (a)
 #else
 	#define PRINT(a) (void)0
 #endif
@@ -73,7 +73,8 @@
 #define ntohl_num(n) (((((n) & 0xFFU)) << 24U) | \
                   ((((n) & 0xFF00U)) << 8U) | \
                   ((((n) & 0xFF0000U)) >> 8U) | \
-                  ((((n) & 0xFF000000U)) >> 24U))
+                  ((((n) & 0xFF000000U)) >> 24U))				  
+#define htons_num(n) (((((unsigned short)(n) & 0x00ffU)) << 8U) | (((unsigned short)(n) & 0xFF00U) >> 8U))
 
 /*baferi za enkripciju*/
 static uint8_t sdbuf[BUFLEN];
@@ -140,7 +141,8 @@ static void backgroundTask(void)
 			changeState = 2;
 			
 			/*kreiranje soketa*/
-			if((s = socket(AF_INET, SOCK_STREAM, 0 )) == SOCKET_ERROR)
+			s = socket(AF_INET, SOCK_STREAM, 0);
+			if(s == SOCKET_ERROR)
 			{
 				PRINT(("Could not create socket!\n"));
 			}
@@ -149,7 +151,7 @@ static void backgroundTask(void)
 			(void)memset((char*)&server, 0, sizeof(server));
 			server.sin_family = AF_INET;
 			server.sin_addr.s_addr = INADDR_ANY;
-			server.sin_port = htons(SWU_BR_SERVERPORT);
+			server.sin_port = htons_num(SWU_BR_SERVERPORT);
 			
 			/*bindovanje*/
 			if( bind(s,(struct sockaddr*)&server , sizeof(server)) == SOCKET_ERROR)
