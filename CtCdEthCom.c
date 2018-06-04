@@ -23,8 +23,10 @@
 #include <net/route.h>
 #include <ipnet/ipioctl.h>
 #include <ipnet/ipioctl_var.h>
-#include <stdio.h>
-#include <time.h>
+/*biblioteka je potrebna*/
+#include <stdio.h>	/*PRQA S 5124*/
+/*biblioteka je potrebna*/
+#include <time.h>	/*PRQA S 5127*/
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdint.h>
@@ -40,7 +42,7 @@
 #include <socket.h>
 #include <netLib.h>
 #include <inetLib.h>
-#include <stdarg.h>
+//#include <stdarg.h>
 #include <stddef.h>
 #include <net/if_dl.h>
 #include <net/if_types.h>
@@ -113,15 +115,16 @@ FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComInit(void)
 	/**/
 	messages = msgQCreate(BUFLEN, BUFLEN, MSG_Q_FIFO);
 	changeState = 1;
-	
-	task = taskCreate("task1", 115, VX_FP_TASK, 0x8000U, (FUNCPTR)backgroundTask, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	/*ne moze se drugacije uraditi*/
+	task = taskCreate("task1", 115, VX_FP_TASK, 0x8000U, (FUNCPTR)backgroundTask, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);	/*PRQA S 0752, 0313*/
 	(void)taskActivate(task);
 }
 
 
 FUNC(void, RTE_CTCDETHCOM_APPL_CODE) REthComCyclic(void) /* PRQA S 0850 */ /* MD_MSR_19.8 */
 {
-	(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL); //msg = 1
+	/*ne moze se drugacije uraditi*/
+	(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL); 	/*PRQA S 0310*/
 }
 
 /*DEFINICIJE FUNKCIJA*/
@@ -133,8 +136,9 @@ static void backgroundTask(void)
   
 	while(1)
 	{
-		/*primanje poruke na ovsnovu koje se zna u koje stanje treba ici*/
-		(void) msgQReceive(messages, (char*)&msg, sizeof(msg), WAIT_FOREVER);
+		/*primanje poruke na osnovu koje se zna u koje stanje treba ici*/
+		/*ne moze se drugacije uraditi*/
+		(void) msgQReceive(messages, (char*)&msg, sizeof(msg), WAIT_FOREVER);	/*PRQA S 0310, 3101, 3102*/
 		
 		if (msg == 1)
 		{
@@ -148,13 +152,16 @@ static void backgroundTask(void)
 			}
 			PRINT(("\n\n\nSocket created.\n"));
 			
-			(void)memset((char*)&server, 0, sizeof(server));
+			/*ne moze se drugacije uraditi*/
+			(void)memset((char*)&server, 0, sizeof(server));	/*PRQA S 0310*/
 			server.sin_family = AF_INET;
 			server.sin_addr.s_addr = INADDR_ANY;
-			server.sin_port = htons_num(SWU_BR_SERVERPORT);
+			/*ne moze se drugacije uraditi*/
+			server.sin_port = htons_num(SWU_BR_SERVERPORT);	/*PRQA S 4397*/
 			
 			/*bindovanje*/
-			if( bind(s,(struct sockaddr*)&server , sizeof(server)) == SOCKET_ERROR)
+			/*ne moze se drugacije uraditi*/
+			if( bind(s,(struct sockaddr*)&server , sizeof(server)) == SOCKET_ERROR)	/*PRQA S 0310, 1291*/
 			{
 				PRINT(("Bind failed: %s\n", strerror(errno))); 
 			}
@@ -170,7 +177,8 @@ static void backgroundTask(void)
 			c = (int32_t)sizeof(struct sockaddr_in);
 			
 			/*prihvatanje komunikacije*/
-			newSocket = accept(s ,(struct sockaddr*)&client, &c);
+			/*ne moze se drugacije uraditi*/
+			newSocket = accept(s ,(struct sockaddr*)&client, &c);	/*PRQA S 0310*/
 			if (newSocket == SOCKET_ERROR)
 			{
 				PRINT(("Accept failed with error!\n"));
@@ -271,11 +279,13 @@ static void backgroundTask(void)
 			}
 			
 			/*zatvaranje soketa*/
-			(void)close(s);
+			/*iz nekog razloga ne vidi funkciju close() i trazi da se deklarise iako je funkcija vec deklarisana*/
+			(void)close(s);	/*PRQA S 3335*/
 			(void)close(newSocket);
 			
 			/*prelazak u finalno stanje*/
-			(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);
+			/*ne moze se drugacije uraditi*/
+			(void)msgQSend(messages, (char*)&changeState, sizeof(changeState), NO_WAIT, MSG_PRI_NORMAL);	/*PRQA S 0310*/
 		}
 		else
 		{
