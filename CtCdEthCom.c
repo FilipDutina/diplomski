@@ -1,5 +1,5 @@
 /*makro za izbacivanje printf() funkcije iz koda*/
-#if 0
+#if 1
 	#define PRINT(a) printf (a)
 #else
 	#define PRINT(a) (void)0
@@ -54,17 +54,17 @@
 #include <timerLib.h>
 #include <dirent.h>
 #include <stat.h>
-#include <inttypes.h>
+#include <inttypes.h> 
 
 #define RTE_STOP_SEC_CTCDETHCOM_APPL_CODE
 #define RTE_START_SEC_CTCDETHCOM_APPL_CODE
 
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
-/*#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	
-#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"*/	
+#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	
+#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"
 #define SOCKET_ERROR -1
-#define BUFLEN 512
+#define BUFLEN 1450
 #define BACKLOG 10
 #define NULL_POINTER (void*)(0)
 #define htonl_num(n) (((((n) & 0x000000ffU)) << 24U) | \
@@ -90,7 +90,7 @@ static MSG_Q_ID messages;
 static TASK_ID task;
 
 /*promenljive koje se koriste za komunikaciju sa racunarom*/
-static struct sockaddr_in server, client;
+static struct sockaddr_in6 server, client;
 static int32_t s, newSocket, c, recvSize;
 static char replyBuffer[BUFLEN];
 
@@ -145,19 +145,36 @@ static void backgroundTask(void)
 			changeState = 2;
 			
 			/*kreiranje soketa*/
-			s = socket(AF_INET, SOCK_STREAM, 0);
+			s = socket(AF_INET6, SOCK_STREAM, 0);
 			if(s == SOCKET_ERROR)
 			{
 				PRINT(("Could not create socket!\n"));
 			}
 			PRINT(("\n\n\nSocket created.\n"));
 			
+			int enable = 1;
+			if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(int)) < 0)
+			{
+				PRINT(("setsockopt(SO_REUSEADDR) failed\n\n"));
+			}
+			
+			
+			
+			
 			/*ne moze se drugacije uraditi*/
-			(void)memset((char*)&server, 0, sizeof(server));	/*PRQA S 0310*/
-			server.sin_family = AF_INET;
-			server.sin_addr.s_addr = INADDR_ANY;
+			//(void)memset((void*)&server, 0, sizeof(server));	/*PRQA S 0310*/
+			server.sin6_flowinfo = 0;
+			server.sin6_family = AF_INET6;
+			//inet_pton(PF_INET6, "fd53:7cb8:383:3::72", &server.sin6_addr);
+			//server.sin6_addr = in6addr_any;
+			inet_pton(AF_INET6, "::0", &server.sin6_addr);	/*in6addr_any == "::0"*/
+			//server.sin6_addr = "::0";
+			//server.sin6_addr.s_addr = INADDR_ANY;
 			/*ne moze se drugacije uraditi*/
-			server.sin_port = htons_num(SWU_BR_SERVERPORT);	/*PRQA S 4397*/
+			server.sin6_port = htons(SWU_BR_SERVERPORT);	/*PRQA S 4397*/
+			
+			
+			
 			
 			/*bindovanje*/
 			/*ne moze se drugacije uraditi*/
@@ -170,18 +187,25 @@ static void backgroundTask(void)
 			PRINT(("Listetning...\n"));
 			
 			/*slusanje*/
-			(void)listen(s, BACKLOG);
+			int a = listen(s, BACKLOG);
+			printf("listen value: %d\n", a);
+			if (a < 0)
+			{
+				puts("listen umro");
+				return 1;
+			}
 			
 			PRINT(("Waiting for incoming connections...\n\n\n\n\n"));
 			
-			c = (int32_t)sizeof(struct sockaddr_in);
+			c = (int32_t)sizeof(struct sockaddr_in6);
 			
 			/*prihvatanje komunikacije*/
 			/*ne moze se drugacije uraditi*/
-			newSocket = accept(s ,(struct sockaddr*)&client, &c);	/*PRQA S 0310*/
-			if (newSocket == SOCKET_ERROR)
+			newSocket = accept(s, (struct sockaddr*)&client, &c);	/*PRQA S 0310*/
+			if (newSocket == -1)
 			{
-				PRINT(("Accept failed with error!\n"));
+				PRINT(("Accept failed with error: %s!\n\n", strerror(errno)));
+				return 1;
 			}
 			PRINT(("Connection accepted!\n"));
 			

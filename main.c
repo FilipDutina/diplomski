@@ -1,8 +1,8 @@
 /*makro za izbacivanje printf() funkcije iz koda*/
 #if 1
-	#define PRINT(a) printf a
+#define PRINT(a) printf a
 #else
-	#define PRINT(a) (void)0
+#define PRINT(a) (void)0
 #endif
 
 #include <stdio.h>
@@ -17,15 +17,16 @@
 
 /*Winsock Library*/
 #pragma comment(lib, "ws2_32.lib") 
+#pragma comment(DLL, "ws2_32.dll") 
 
 #define SLEEP_TIME 15
-#define BUFLEN 512
+#define BUFLEN 1450
 #define NUM_OF_KEYS 22
 #define LOOP_STOP 99
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
-/*#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"
-#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"*/	
+#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"
+#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"
 
 #define zFAS_IPv4 "192.168.122.60"
 
@@ -35,6 +36,8 @@ void decrypt();
 uint32_t prime(uint32_t pr);
 void ce();
 uint32_t cd(uint32_t x);
+
+static char address[] = "fd53:7cb8:383:3::4f";
 
 
 /*soket*/
@@ -52,8 +55,35 @@ static uint32_t primes[] = { 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 
 
 int main()
 {
+	/*promenljive koje se koriste za komunikaciju*/
+	WSADATA wsa;
+	struct sockaddr_in6 server;
+	uint8_t message[] = "Start";
+	uint8_t respondOK[] = "Let's communicate!";
+	uint8_t serverReply[BUFLEN];
+	int32_t recvSize;
+	int32_t numOfFilesToBeReceived;
 	time_t randTime;
 	srand((unsigned)time(&randTime));
+
+
+
+
+	
+	struct addrinfo hints, *res;
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_STREAM;
+	getaddrinfo(SWUP_ZFAS_IP_ADDRESS, "29170", &hints, &res);
+
+	printf("getaddrinfo %s\n", strerror(errno));
+
+	char addrstr[100];
+	//inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 100);
+
+
+
+
 
 	a = rand() % (sizeof(primes) / sizeof(uint32_t));
 	b = rand() % (sizeof(primes) / sizeof(uint32_t));
@@ -98,13 +128,13 @@ int main()
 
 	n = p * q;
 	phi = (p - 1)*(q - 1);
-	
+
 	ce();
-	
+
 	PRINT(("POSSIBLE VALUES OF e AND d ARE:"));
 	for (i = 0; i < j - 1; i++)
 	{
-		PRINT(("\n%d.\t%d\t%ld",i, e[i], d[i]));
+		PRINT(("\n%d.\t%d\t%ld", i, e[i], d[i]));
 	}
 	PRINT(("\n\n"));
 
@@ -114,15 +144,7 @@ int main()
 	PRINT(("numOfEncAndDec is: %d\n", numOfEncAndDec));
 	PRINT(("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]));
 
-	/*promenljive koje se koriste za komunikaciju*/
-	WSADATA wsa;
-	struct sockaddr_in server;
-	uint8_t message[] = "Start";
-	uint8_t respondOK[] = "Let's communicate!";
-	uint8_t serverReply[BUFLEN];
-	int32_t recvSize;
-	int32_t numOfFilesToBeReceived;
-
+	
 	/*funkcije za konekciju*/
 	PRINT(("\nInitialising Winsock..."));
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
@@ -132,24 +154,51 @@ int main()
 	}
 	PRINT(("Initialised.\n"));
 
-	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
+	if ((s = socket(AF_INET6, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
 		PRINT(("Could not create socket : %d", WSAGetLastError()));
 	}
 	PRINT(("Socket created.\n"));
 
-	server.sin_family = AF_INET;
-	server.sin_port = htons(SWU_BR_SERVERPORT);
-	server.sin_addr.s_addr = inet_addr(zFAS_IPv4);
+	void* srvr = &server;
+
+	//memset((int*)&server, 0, sizeof(struct sockaddr_in6));
+	memset(srvr, 0, sizeof(server));
+	server.sin6_family = AF_INET6;
+	server.sin6_port = htons(SWU_BR_SERVERPORT);
+	//server.sin_addr.s_addr = inet_addr(zFAS_IPv4);
+	int a = inet_pton(AF_INET6, SWUP_ZFAS_IP_ADDRESS, &server.sin6_addr);
+	PRINT(("InetPton: %d\n\n", a));
+
+	//PRINT(("    -%c-    \n\n\n\n"), a);
+	//server.sin6_addr.s6_addr = inet_pton(AF_INET6, SWUP_ZFAS_IP_ADDRESS, &server.sin6_addr);
+	server.sin6_flowinfo = 0;   // flow info
+
+	int32_t cc = (int32_t)sizeof(struct sockaddr_in6);
+
+
+
+
+
+
+
 
 	/*konekcija na zFAS plocu*/
 	PRINT(("Connect to remote server\n"));
-	if (connect(s, (struct sockaddr*)&server, sizeof(server)) < 0)
+	if (connect(s, (struct sockaddr*)&server, cc) < 0)
 	{
 		PRINT(("Failed. Error Code : %d\n", WSAGetLastError()));
 		exit(EXIT_FAILURE);
 	}
 	PRINT(("Connected"));
+
+
+
+
+
+
+
+
 
 	/*slanje inicijalne poruke*/
 	if (send(s, message, strlen(message), 0) < 0)
@@ -283,8 +332,8 @@ void receiveFile()
 	fseek(fr, 0, SEEK_SET);
 
 	/*racunanje celog dela i ostatka datog fajla*/
-	ceo = sizeOfFile / BUFLEN;	
-	ostatak = sizeOfFile % BUFLEN;	
+	ceo = sizeOfFile / BUFLEN;
+	ostatak = sizeOfFile % BUFLEN;
 
 	PRINT(("ceo deo: %d * BUFLEN \t\t ostatak: %d\n\n", ceo, ostatak));
 
@@ -292,7 +341,7 @@ void receiveFile()
 	while ((fr_block_sz = recv(s, revbuf, sizeof(revbuf), 0)) != 0)
 	{
 		Sleep(SLEEP_TIME);
-		
+
 		/*ovde pristizu podaci koji su enkriptovani*/
 		for (i = 0; i < fr_block_sz; i++)
 		{
@@ -304,9 +353,9 @@ void receiveFile()
 
 		/*dekripcija*/
 		decrypt();
-		
+
 		Sleep(SLEEP_TIME);
-		
+
 		/*pisanje u fajl dekriptovanih podataka*/
 		fwrite(sdbuf, sizeof(char), fr_block_sz, fr);
 
@@ -405,7 +454,7 @@ uint32_t cd(uint32_t x)
 {
 	uint32_t k = 1;
 
-	while(1)
+	while (1)
 	{
 		k = k + phi;
 
