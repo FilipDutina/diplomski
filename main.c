@@ -17,16 +17,15 @@
 
 /*Winsock Library*/
 #pragma comment(lib, "ws2_32.lib") 
-#pragma comment(DLL, "ws2_32.dll") 
 
 #define SLEEP_TIME 15
-#define BUFLEN 1450
+#define BUFLEN 512
 #define NUM_OF_KEYS 22
 #define LOOP_STOP 99
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
-#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"
-#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"
+/*#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"
+#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"*/
 
 #define zFAS_IPv4 "192.168.122.60"
 
@@ -36,8 +35,6 @@ void decrypt();
 uint32_t prime(uint32_t pr);
 void ce();
 uint32_t cd(uint32_t x);
-
-static char address[] = "fd53:7cb8:383:3::4f";
 
 
 /*soket*/
@@ -52,38 +49,13 @@ uint32_t e[BUFLEN], d[BUFLEN];
 uint32_t p, q, n, a, b, flag, phi, i, j, numOfEncAndDec;
 /*niz prostih brojeva koji se koriste za enkripciju*/
 static uint32_t primes[] = { 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 };
+/*flag za biranje foldera*/
+uint8_t wantedFolder;
 
 int main()
 {
-	/*promenljive koje se koriste za komunikaciju*/
-	WSADATA wsa;
-	struct sockaddr_in6 server;
-	uint8_t message[] = "Start";
-	uint8_t respondOK[] = "Let's communicate!";
-	uint8_t serverReply[BUFLEN];
-	int32_t recvSize;
-	int32_t numOfFilesToBeReceived;
 	time_t randTime;
 	srand((unsigned)time(&randTime));
-
-
-
-
-	
-	struct addrinfo hints, *res;
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET6;
-	hints.ai_socktype = SOCK_STREAM;
-	getaddrinfo(SWUP_ZFAS_IP_ADDRESS, "29170", &hints, &res);
-
-	printf("getaddrinfo %s\n", strerror(errno));
-
-	char addrstr[100];
-	//inet_ntop(res->ai_family, res->ai_addr->sa_data, addrstr, 100);
-
-
-
-
 
 	a = rand() % (sizeof(primes) / sizeof(uint32_t));
 	b = rand() % (sizeof(primes) / sizeof(uint32_t));
@@ -144,7 +116,15 @@ int main()
 	PRINT(("numOfEncAndDec is: %d\n", numOfEncAndDec));
 	PRINT(("e[%d] = %d, d[%d] = %d\n\n", numOfEncAndDec, e[numOfEncAndDec], numOfEncAndDec, d[numOfEncAndDec]));
 
-	
+	/*promenljive koje se koriste za komunikaciju*/
+	WSADATA wsa;
+	struct sockaddr_in server;
+	uint8_t message[] = "Start";
+	uint8_t respondOK[] = "Let's communicate!";
+	uint8_t serverReply[BUFLEN];
+	int32_t recvSize;
+	int32_t numOfFilesToBeReceived;
+
 	/*funkcije za konekciju*/
 	PRINT(("\nInitialising Winsock..."));
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
@@ -154,51 +134,24 @@ int main()
 	}
 	PRINT(("Initialised.\n"));
 
-	if ((s = socket(AF_INET6, SOCK_STREAM, 0)) == INVALID_SOCKET)
+	if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET)
 	{
 		PRINT(("Could not create socket : %d", WSAGetLastError()));
 	}
 	PRINT(("Socket created.\n"));
 
-	void* srvr = &server;
-
-	//memset((int*)&server, 0, sizeof(struct sockaddr_in6));
-	memset(srvr, 0, sizeof(server));
-	server.sin6_family = AF_INET6;
-	server.sin6_port = htons(SWU_BR_SERVERPORT);
-	//server.sin_addr.s_addr = inet_addr(zFAS_IPv4);
-	int a = inet_pton(AF_INET6, SWUP_ZFAS_IP_ADDRESS, &server.sin6_addr);
-	PRINT(("InetPton: %d\n\n", a));
-
-	//PRINT(("    -%c-    \n\n\n\n"), a);
-	//server.sin6_addr.s6_addr = inet_pton(AF_INET6, SWUP_ZFAS_IP_ADDRESS, &server.sin6_addr);
-	server.sin6_flowinfo = 0;   // flow info
-
-	int32_t cc = (int32_t)sizeof(struct sockaddr_in6);
-
-
-
-
-
-
-
+	server.sin_family = AF_INET;
+	server.sin_port = htons(SWU_BR_SERVERPORT);
+	server.sin_addr.s_addr = inet_addr(zFAS_IPv4);
 
 	/*konekcija na zFAS plocu*/
 	PRINT(("Connect to remote server\n"));
-	if (connect(s, (struct sockaddr*)&server, cc) < 0)
+	if (connect(s, (struct sockaddr*)&server, sizeof(server)) < 0)
 	{
 		PRINT(("Failed. Error Code : %d\n", WSAGetLastError()));
 		exit(EXIT_FAILURE);
 	}
 	PRINT(("Connected"));
-
-
-
-
-
-
-
-
 
 	/*slanje inicijalne poruke*/
 	if (send(s, message, strlen(message), 0) < 0)
@@ -257,6 +210,16 @@ int main()
 	}
 	numOfFilesToBeReceived = ntohl(numOfFilesToBeReceived);
 	PRINT(("Broj fajlova koje primam: %d\n\n\n", numOfFilesToBeReceived));
+
+	/*poslati 0 za folder a, i 1 za folder b*/
+	wantedFolder = 0;
+	wantedFolder = htons(wantedFolder);
+	Sleep(SLEEP_TIME);
+	if (send(s, &wantedFolder, sizeof(wantedFolder), 0) == SOCKET_ERROR)
+	{
+		PRINT(("wantedFolder send() FAILED!\n\n"));
+	}
+	PRINT(("wantedFolder is sent!\n\n"));
 
 	/*for petlja u kojoj pozivam funkciju receiveFile() za svaki fajl posebno*/
 	for (int i = numOfFilesToBeReceived; i > 0; i--)
@@ -464,3 +427,4 @@ uint32_t cd(uint32_t x)
 		}
 	}
 }
+

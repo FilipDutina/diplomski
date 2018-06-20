@@ -54,17 +54,17 @@
 #include <timerLib.h>
 #include <dirent.h>
 #include <stat.h>
-#include <inttypes.h> 
+#include <inttypes.h>
 
 #define RTE_STOP_SEC_CTCDETHCOM_APPL_CODE
 #define RTE_START_SEC_CTCDETHCOM_APPL_CODE
 
 #define SWU_BR_SERVERPORT  29170
 #define SWU_BR_CLIENTPORT  29171
-#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	
-#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"
+/*#define SWUP_ZFAS_IP_ADDRESS "fd53:7cb8:383:3::4f"	
+#define SWUP_MIB_ZR_IP_ADDRESS "fd53:7cb8:383:3::73"*/	
 #define SOCKET_ERROR -1
-#define BUFLEN 1450
+#define BUFLEN 512
 #define BACKLOG 10
 #define NULL_POINTER (void*)(0)
 #define htonl_num(n) (((((n) & 0x000000ffU)) << 24U) | \
@@ -77,6 +77,7 @@
                   ((((n) & 0xFF0000U)) >> 8U) | \
                   ((((n) & 0xFF000000U)) >> 24U))				  
 #define htons_num(n) (((((unsigned short)(n) & 0x00ffU)) << 8U) | (((unsigned short)(n) & 0xFF00U) >> 8U))
+#define ntohs_num(n) (((((unsigned short)(n) & 0x00ffU)) << 8U) | (((unsigned short)(n) & 0xFF00U) >> 8U))
 
 /*baferi za enkripciju*/
 static uint8_t sdbuf[BUFLEN];
@@ -90,12 +91,15 @@ static MSG_Q_ID messages;
 static TASK_ID task;
 
 /*promenljive koje se koriste za komunikaciju sa racunarom*/
-static struct sockaddr_in6 server, client;
+static struct sockaddr_in server, client;
 static int32_t s, newSocket, c, recvSize;
 static char replyBuffer[BUFLEN];
 
 /*flag na osnovu koga se menja stanje*/
 static int32_t changeState;	
+
+/*flag za biranje direktorijuma*/
+static uint8_t wantedFolder;;
 
 /*poruke za komunikaciju*/
 static char message[] = "Start";
@@ -145,36 +149,19 @@ static void backgroundTask(void)
 			changeState = 2;
 			
 			/*kreiranje soketa*/
-			s = socket(AF_INET6, SOCK_STREAM, 0);
+			s = socket(AF_INET, SOCK_STREAM, 0);
 			if(s == SOCKET_ERROR)
 			{
 				PRINT(("Could not create socket!\n"));
 			}
 			PRINT(("\n\n\nSocket created.\n"));
 			
-			int enable = 1;
-			if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (const char*)&enable, sizeof(int)) < 0)
-			{
-				PRINT(("setsockopt(SO_REUSEADDR) failed\n\n"));
-			}
-			
-			
-			
-			
 			/*ne moze se drugacije uraditi*/
-			//(void)memset((void*)&server, 0, sizeof(server));	/*PRQA S 0310*/
-			server.sin6_flowinfo = 0;
-			server.sin6_family = AF_INET6;
-			//inet_pton(PF_INET6, "fd53:7cb8:383:3::72", &server.sin6_addr);
-			//server.sin6_addr = in6addr_any;
-			inet_pton(AF_INET6, "::0", &server.sin6_addr);	/*in6addr_any == "::0"*/
-			//server.sin6_addr = "::0";
-			//server.sin6_addr.s_addr = INADDR_ANY;
+			(void)memset((char*)&server, 0, sizeof(server));	/*PRQA S 0310*/
+			server.sin_family = AF_INET;
+			server.sin_addr.s_addr = INADDR_ANY;
 			/*ne moze se drugacije uraditi*/
-			server.sin6_port = htons(SWU_BR_SERVERPORT);	/*PRQA S 4397*/
-			
-			
-			
+			server.sin_port = htons_num(SWU_BR_SERVERPORT);	/*PRQA S 4397*/
 			
 			/*bindovanje*/
 			/*ne moze se drugacije uraditi*/
@@ -187,25 +174,18 @@ static void backgroundTask(void)
 			PRINT(("Listetning...\n"));
 			
 			/*slusanje*/
-			int a = listen(s, BACKLOG);
-			printf("listen value: %d\n", a);
-			if (a < 0)
-			{
-				puts("listen umro");
-				return 1;
-			}
+			(void)listen(s, BACKLOG);
 			
 			PRINT(("Waiting for incoming connections...\n\n\n\n\n"));
 			
-			c = (int32_t)sizeof(struct sockaddr_in6);
+			c = (int32_t)sizeof(struct sockaddr_in);
 			
 			/*prihvatanje komunikacije*/
 			/*ne moze se drugacije uraditi*/
-			newSocket = accept(s, (struct sockaddr*)&client, &c);	/*PRQA S 0310*/
-			if (newSocket == -1)
+			newSocket = accept(s ,(struct sockaddr*)&client, &c);	/*PRQA S 0310*/
+			if (newSocket == SOCKET_ERROR)
 			{
-				PRINT(("Accept failed with error: %s!\n\n", strerror(errno)));
-				return 1;
+				PRINT(("Accept failed with error!\n"));
 			}
 			PRINT(("Connection accepted!\n"));
 			
@@ -242,6 +222,16 @@ static void backgroundTask(void)
 			/*primi javne kljuceve neophodne za enkripciju*/
 			receivePublicKeys();
 			
+			/*primi flag koji ti govori u koji direktorijum da udjes; 0 == a i 1 == b*/
+			 
+			recvSize = recv(newSocket, &wantedFolder, sizeof(wantedFolder), 0);
+			if (recvSize == SOCKET_ERROR)
+			{
+				PRINT(("Recv of wanted folder from client failed!\n\n"));
+			}
+			wantedFolder = ntohs_num(wantedFolder);
+			PRINT(("Wanted folder received: %d\n\n", wantedFolder));
+			
 			/*broj fajlova u direktorijumu*/
 			uint32_t filesNum = (uint32_t)numOfFiles();
 			uint32_t networkFilesNum;
@@ -260,7 +250,14 @@ static void backgroundTask(void)
 			char tempStr[BUFLEN];
 			
 			/*putanja na kojoj se nalaze fajlovi koje najpre treba enkriptovati pa zatim i poslati racunaru*/
-			dirp = opendir("/mmc0:4/a");
+			if(wantedFolder == 0)
+			{
+				dirp = opendir("/mmc0:4/a");
+			}
+			else
+			{
+				dirp = opendir("/mmc0:4/b");
+			}
 			if(dirp == NULL_POINTER)
 			{
 				PRINT(("Error opening dir!\n\n\n"));
@@ -387,8 +384,14 @@ static void sendFile(const char fs_name[])
 	(void)memset(tempDir, 0, BUFLEN);
 	
 	/*dodavanje putanje*/
-	(void)strcpy(tempDir, "/mmc0:4/a/");
-	
+	if(wantedFolder == 0)
+	{
+		(void)strcpy(tempDir, "/mmc0:4/a/");
+	}
+	else
+	{
+		(void)strcpy(tempDir, "/mmc0:4/b/");
+	}
 	//spajanje imena fajla i zeljene putanje
 	(void)strcat(tempDir, fs_name);
 	PRINT(("NAKON SPAJANJA PUTANJE I IMENA FAJLA: %s\n", tempDir));
@@ -475,7 +478,14 @@ static int32_t numOfFiles(void)
 	DIR* dirp;
 	struct dirent* direntp;
 	
-	dirp = opendir("/mmc0:4/a");
+	if(wantedFolder == 0)
+	{
+		dirp = opendir("/mmc0:4/a");
+	}
+	else
+	{
+		dirp = opendir("/mmc0:4/b");
+	}
 	if(dirp == NULL_POINTER)
 	{
 		PRINT(("Error opening dir!\n\n\n"));
@@ -529,3 +539,4 @@ static void encrypt(void)
 		en[iter] = (uint32_t)k;
 	}
 }
+
