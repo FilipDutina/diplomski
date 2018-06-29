@@ -49,8 +49,6 @@ uint32_t e[BUFLEN], d[BUFLEN];
 uint32_t p, q, n, a, b, flag, phi, i, j, numOfEncAndDec;
 /*niz prostih brojeva koji se koriste za enkripciju*/
 static uint32_t primes[] = { 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 };
-/*flag za biranje foldera*/
-uint8_t wantedFolder;
 
 int main()
 {
@@ -120,6 +118,7 @@ int main()
 	WSADATA wsa;
 	struct sockaddr_in server;
 	uint8_t message[] = "Start";
+	uint8_t folder[] = "b";
 	uint8_t respondOK[] = "Let's communicate!";
 	uint8_t serverReply[BUFLEN];
 	int32_t recvSize;
@@ -176,7 +175,7 @@ int main()
 
 	if (strcmp(serverReply, respondOK) == 0)
 	{
-		PRINT(("We are connected now, CHEERS! :)\n\n\n"));
+		PRINT(("We are connected now, CHEERS!\n\n\n"));
 		PRINT(("*****************************************************************************\n"));
 	}
 
@@ -202,6 +201,14 @@ int main()
 
 	Sleep(SLEEP_TIME);
 
+	/*slanje zeljenog foldera*/
+	if (send(s, folder, strlen(folder), 0) < 0)
+	{
+		PRINT(("Send failed\n"));
+		exit(EXIT_FAILURE);
+	}
+	PRINT(("Folder sent: %s\n\n", folder));
+
 	/*primanje broja fajlova koje ploca salje*/
 	recvSize = recv(s, &numOfFilesToBeReceived, sizeof(numOfFilesToBeReceived), 0);
 	if (recvSize == SOCKET_ERROR)
@@ -210,16 +217,6 @@ int main()
 	}
 	numOfFilesToBeReceived = ntohl(numOfFilesToBeReceived);
 	PRINT(("Broj fajlova koje primam: %d\n\n\n", numOfFilesToBeReceived));
-
-	/*poslati 0 za folder a, i 1 za folder b*/
-	wantedFolder = 0;
-	wantedFolder = htons(wantedFolder);
-	Sleep(SLEEP_TIME);
-	if (send(s, &wantedFolder, sizeof(wantedFolder), 0) == SOCKET_ERROR)
-	{
-		PRINT(("wantedFolder send() FAILED!\n\n"));
-	}
-	PRINT(("wantedFolder is sent!\n\n"));
 
 	/*for petlja u kojoj pozivam funkciju receiveFile() za svaki fajl posebno*/
 	for (int i = numOfFilesToBeReceived; i > 0; i--)

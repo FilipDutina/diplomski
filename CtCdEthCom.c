@@ -1,5 +1,5 @@
 /*makro za izbacivanje printf() funkcije iz koda*/
-#if 1
+#if 0
 	#define PRINT(a) printf (a)
 #else
 	#define PRINT(a) (void)0
@@ -77,7 +77,6 @@
                   ((((n) & 0xFF0000U)) >> 8U) | \
                   ((((n) & 0xFF000000U)) >> 24U))				  
 #define htons_num(n) (((((unsigned short)(n) & 0x00ffU)) << 8U) | (((unsigned short)(n) & 0xFF00U) >> 8U))
-#define ntohs_num(n) (((((unsigned short)(n) & 0x00ffU)) << 8U) | (((unsigned short)(n) & 0xFF00U) >> 8U))
 
 /*baferi za enkripciju*/
 static uint8_t sdbuf[BUFLEN];
@@ -94,12 +93,10 @@ static TASK_ID task;
 static struct sockaddr_in server, client;
 static int32_t s, newSocket, c, recvSize;
 static char replyBuffer[BUFLEN];
+static char folder[BUFLEN];
 
 /*flag na osnovu koga se menja stanje*/
 static int32_t changeState;	
-
-/*flag za biranje direktorijuma*/
-static uint8_t wantedFolder;;
 
 /*poruke za komunikaciju*/
 static char message[] = "Start";
@@ -217,20 +214,25 @@ static void backgroundTask(void)
 				{
 					PRINT(("Second send() failed\n"));
 				}
+				
+				return 1;
 			}
 			
 			/*primi javne kljuceve neophodne za enkripciju*/
 			receivePublicKeys();
 			
-			/*primi flag koji ti govori u koji direktorijum da udjes; 0 == a i 1 == b*/
-			 
-			recvSize = recv(newSocket, &wantedFolder, sizeof(wantedFolder), 0);
+			/*klijent salje iz kog foldera zeli podatke*/
+			recvSize = recv(newSocket, folder, BUFLEN, 0);
 			if (recvSize == SOCKET_ERROR)
 			{
-				PRINT(("Recv of wanted folder from client failed!\n\n"));
+				PRINT(("Recv from client failed!\n"));
 			}
-			wantedFolder = ntohs_num(wantedFolder);
-			PRINT(("Wanted folder received: %d\n\n", wantedFolder));
+			PRINT(("Reply received --------->\n"));
+			
+			/*terminacija stringa na kraju*/
+			folder[recvSize] = '\0';
+			PRINT(("%s\n", folder));
+			PRINT(("\n\n"));
 			
 			/*broj fajlova u direktorijumu*/
 			uint32_t filesNum = (uint32_t)numOfFiles();
@@ -250,14 +252,15 @@ static void backgroundTask(void)
 			char tempStr[BUFLEN];
 			
 			/*putanja na kojoj se nalaze fajlovi koje najpre treba enkriptovati pa zatim i poslati racunaru*/
-			if(wantedFolder == 0)
+			if(strcmp(folder, "a") == 0)
 			{
 				dirp = opendir("/mmc0:4/a");
 			}
-			else
+			else if(strcmp(folder, "b") == 0)
 			{
 				dirp = opendir("/mmc0:4/b");
 			}
+			
 			if(dirp == NULL_POINTER)
 			{
 				PRINT(("Error opening dir!\n\n\n"));
@@ -384,14 +387,15 @@ static void sendFile(const char fs_name[])
 	(void)memset(tempDir, 0, BUFLEN);
 	
 	/*dodavanje putanje*/
-	if(wantedFolder == 0)
+	if(strcmp(folder, "a") == 0)
 	{
 		(void)strcpy(tempDir, "/mmc0:4/a/");
 	}
-	else
+	else if(strcmp(folder, "b") == 0)
 	{
 		(void)strcpy(tempDir, "/mmc0:4/b/");
 	}
+	
 	//spajanje imena fajla i zeljene putanje
 	(void)strcat(tempDir, fs_name);
 	PRINT(("NAKON SPAJANJA PUTANJE I IMENA FAJLA: %s\n", tempDir));
@@ -478,14 +482,15 @@ static int32_t numOfFiles(void)
 	DIR* dirp;
 	struct dirent* direntp;
 	
-	if(wantedFolder == 0)
+	if(strcmp(folder, "a") == 0)
 	{
 		dirp = opendir("/mmc0:4/a");
 	}
-	else
+	else if(strcmp(folder, "b") == 0)
 	{
 		dirp = opendir("/mmc0:4/b");
 	}
+	
 	if(dirp == NULL_POINTER)
 	{
 		PRINT(("Error opening dir!\n\n\n"));
