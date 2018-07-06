@@ -118,7 +118,7 @@ int main()
 	WSADATA wsa;
 	struct sockaddr_in server;
 	uint8_t message[] = "Start";
-	uint8_t folder[] = "b";
+	uint8_t folder[] = "a";
 	uint8_t respondOK[] = "Let's communicate!";
 	uint8_t serverReply[BUFLEN];
 	int32_t recvSize;
@@ -225,6 +225,8 @@ int main()
 
 		PRINT(("Primam fajl broj: %d\n", i));
 
+		Sleep(SLEEP_TIME);
+
 		receiveFile();
 
 		PRINT(("\n\n\n"));
@@ -285,8 +287,7 @@ void receiveFile()
 
 	sizeOfFile = ntohl(sizeOfFile);
 
-	PRINT(("PRIMLJENA velicina fajla: %lld\n\n", sizeOfFile));
-
+	/*PRINT(("PRIMLJENA velicina fajla: %lld\n\n", sizeOfFile));*/
 
 	/*vracanje na pocetak fajla*/
 	fseek(fr, 0, SEEK_SET);
