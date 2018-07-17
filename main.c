@@ -52,6 +52,14 @@ static uint32_t primes[] = { 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 
 
 int main()
 {
+	LARGE_INTEGER frequency;
+	LARGE_INTEGER start;
+	LARGE_INTEGER end;
+	double interval;
+
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+
 	time_t randTime;
 	srand((unsigned)time(&randTime));
 
@@ -234,6 +242,12 @@ int main()
 
 	PRINT(("\n\n\n\n\n\n\n\n\t\t\t\t\t**********G  O  T  O  V  O**********\n\n\n\n\n\n"));
 
+	/*merenje vremena*/
+	QueryPerformanceCounter(&end);
+	interval = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+
+	printf("Time: %f sec \n\n\n\n", interval);
+
 	/*zatvaranje soketa*/
 	closesocket(s);
 	WSACleanup();
@@ -285,7 +299,9 @@ void receiveFile()
 		PRINT(("Name of the file recv() failed\n"));
 	}
 
+	Sleep(SLEEP_TIME);
 	sizeOfFile = ntohl(sizeOfFile);
+	Sleep(SLEEP_TIME);
 
 	/*PRINT(("PRIMLJENA velicina fajla: %lld\n\n", sizeOfFile));*/
 
