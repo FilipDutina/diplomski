@@ -85,6 +85,9 @@ static uint32_t en[BUFLEN];
 /*javni kljucevi za enkripciju*/
 static uint64_t publicKey, n;
 
+/*simetricni kljuc za dekripciju javnih kljuceva*/
+static const uint64_t XORkey = 1117;
+
 /**/
 static MSG_Q_ID messages;
 static TASK_ID task;
@@ -351,6 +354,10 @@ static void receivePublicKeys(void)
 	PRINT(("EXPONENT received!\n"));
 	
 	(void)nanosleep(&nsTime, NULL_POINTER);
+	
+	/*dekripcija javnih kljuceva*/
+	NETWORKmodulus = NETWORKmodulus ^ XORkey;
+	NETWORKexponent = NETWORKexponent ^ XORkey;
 	
 	n = ntohl_num(NETWORKmodulus);
 	publicKey = ntohl_num(NETWORKexponent);

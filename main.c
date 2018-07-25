@@ -49,6 +49,9 @@ uint32_t e[BUFLEN], d[BUFLEN];
 uint32_t p, q, n, a, b, flag, phi, i, j, numOfEncAndDec;
 /*niz prostih brojeva koji se koriste za enkripciju*/
 static uint32_t primes[] = { 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97 };
+/*kljuc za enkripciju javnih kljuceva*/
+const uint64_t XORkey = 1117;
+
 
 int main()
 {
@@ -57,6 +60,7 @@ int main()
 	LARGE_INTEGER end;
 	double interval;
 
+	/*merenje vremena izvrsavanja*/
 	QueryPerformanceFrequency(&frequency);
 	QueryPerformanceCounter(&start);
 
@@ -105,7 +109,9 @@ int main()
 	PRINT(("Primes are -%d- and -%d-, and p*q is -%d-\n\n", p, q, p*q));
 
 	n = p * q;
-	phi = (p - 1)*(q - 1);
+	phi = (p - 1) * (q - 1);
+	/*vrednost Ojlerove fi funkcije*/
+	PRINT(("PHI: %d\n\n", phi));
 
 	ce();
 
@@ -192,6 +198,16 @@ int main()
 	uint64_t NETWORKexponent = htonl(e[numOfEncAndDec]);
 
 	Sleep(SLEEP_TIME);
+
+	PRINT(("NETWORKmodulus %" PRIu64 "\n", NETWORKmodulus));
+	PRINT(("NETWORKexponent %" PRIu64 "\n\n", NETWORKexponent));
+
+	/*enkripcija javnih kljuceva*/
+	NETWORKmodulus = NETWORKmodulus ^ XORkey;
+	NETWORKexponent = NETWORKexponent ^ XORkey;
+
+	PRINT(("NETWORKmodulus %" PRIu64 "\n", NETWORKmodulus));
+	PRINT(("NETWORKexponent %" PRIu64 "\n\n", NETWORKexponent));
 
 	if (send(s, &NETWORKmodulus, sizeof(NETWORKmodulus), 0) == SOCKET_ERROR)
 	{
